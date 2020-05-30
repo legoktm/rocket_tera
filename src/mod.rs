@@ -9,7 +9,7 @@
 //!
 //!      ```toml
 //!      [dependencies.rocket_contrib]
-//!      version = "0.4.4"
+//!      version = "0.4.5"
 //!      default-features = false
 //!      features = ["handlebars_templates", "tera_templates"]
 //!      ```
@@ -158,7 +158,7 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 ///
 /// ```toml
 /// [dependencies.rocket_contrib]
-/// version = "0.4.4"
+/// version = "0.4.5"
 /// default-features = false
 /// features = ["handlebars_templates", "tera_templates"]
 /// ```
