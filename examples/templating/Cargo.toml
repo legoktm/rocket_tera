@@ -1,5 +1,5 @@
 [package]
-name = "tera_templates"
+name = "templating"
 version = "0.0.0"
 workspace = "../"
 edition = "2018"
@@ -13,4 +13,5 @@ serde_json = "1.0"
 [dependencies.rocket_contrib]
 path = "../../contrib/lib"
 default-features = false
-features = ["tera_templates"]
+# in your application, you should enable only the template engine(s) used
+features = ["tera_templates", "handlebars_templates"]
