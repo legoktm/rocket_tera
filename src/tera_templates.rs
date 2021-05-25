@@ -2,9 +2,10 @@ use std::path::Path;
 use std::error::Error;
 
 use serde::Serialize;
-use crate::templates::Engine;
 
-pub use crate::templates::tera::{Context, Tera};
+use crate::engine::Engine;
+
+pub use crate::tera::{Context, Tera};
 
 impl Engine for Tera {
     const EXT: &'static str = "tera";

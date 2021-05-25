@@ -1,5 +1,5 @@
-use crate::templates::{DEFAULT_TEMPLATE_DIR, Context, Engines};
-use crate::templates::context::{Callback, ContextManager};
+use crate::{DEFAULT_TEMPLATE_DIR, Context, Engines};
+use crate::context::{Callback, ContextManager};
 
 use rocket::{Rocket, Build, Orbit};
 use rocket::fairing::{self, Fairing, Info, Kind};

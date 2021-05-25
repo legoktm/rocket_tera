@@ -1,50 +1,42 @@
-//! Dynamic template engine support for handlebars and tera.
+//! Dynamic templating engine support for Rocket.
 //!
-//! # Overview
+//! This crate adds support for dynamic template rendering to Rocket. It
+//! automatically discovers templates, provides a `Responder` to render
+//! templates, and automatically reloads templates when compiled in debug mode.
+//! At present, it supports [Handlebars] and [Tera].
 //!
-//! The general outline for using templates in Rocket is:
+//! # Usage
 //!
-//!   0. Enable the `rocket_contrib` feature corresponding to your templating
-//!      engine(s) of choice:
+//!   1. Enable the `rocket_dyn_templates` feature corresponding to your
+//!      templating engine(s) of choice:
 //!
 //!      ```toml
-//!      [dependencies.rocket_contrib]
-//!      version = "0.5.0-dev"
+//!      [dependencies.rocket_dyn_templates]
+//!      version = "0.1.0-dev"
 //!      default-features = false
-//!      features = ["handlebars_templates", "tera_templates"]
+//!      features = ["handlebars", "tera"]
 //!      ```
 //!
-//!   1. Write your template files in Handlebars (extension: `.hbs`) and/or tera
-//!      (extensions: `.tera`) in the templates directory (default:
+//!   1. Write your template files in Handlebars (`.hbs`) and/or Tera (`.tera`)
+//!      in the configurable `template_dir` directory (default:
 //!      `{rocket_root}/templates`).
 //!
-//!   2. Attach the template fairing, [`Template::fairing()`]:
-//!
-//!      ```rust
-//!      # extern crate rocket;
-//!      # extern crate rocket_contrib;
-//!      use rocket_contrib::templates::Template;
-//!
-//!      fn main() {
-//!          rocket::build()
-//!              .attach(Template::fairing())
-//!              // ...
-//!          # ;
-//!      }
-//!      ```
-//!
-//!   3. Return a [`Template`] using [`Template::render()`], supplying the name
-//!      of the template file **minus the last two extensions**, from a handler.
+//!   2. Attach `Template::fairing()` return a `Template` using
+//!      `Template::render()`, supplying the name of the template file **minus
+//!      the last two extensions**:
 //!
 //!      ```rust
 //!      # #[macro_use] extern crate rocket;
-//!      # #[macro_use] extern crate rocket_contrib;
-//!      # fn context() {  }
-//!      use rocket_contrib::templates::Template;
+//!      use rocket_dyn_templates::Template;
+//!
+//!      #[launch]
+//!      fn rocket() -> _ {
+//!          rocket::build().attach(Template::fairing())
+//!      }
 //!
 //!      #[get("/")]
 //!      fn index() -> Template {
-//!          let context = context();
+//!          # let context = ();
 //!          Template::render("template-name", &context)
 //!      }
 //!      ```
@@ -57,7 +49,8 @@
 //! [Discovery](#discovery) for more.
 //!
 //! Templates that are _not_ discovered by Rocket, such as those registered
-//! directly via [`Template::custom()`], are _not_ renamed.
+//! directly via [`Template::custom()`], are _not_ renamed. Use the name with
+//! which the template was orginally registered.
 //!
 //! ## Content Type
 //!
@@ -66,7 +59,7 @@
 //! extension or the extension is unknown. For example, for a discovered
 //! template with file name `foo.html.hbs` or a manually registered template
 //! with name ending in `foo.html`, the `Content-Type` is automatically set to
-//! [`ContentType::HTML`].
+//! `ContentType::HTML`.
 //!
 //! ## Discovery
 //!
@@ -75,8 +68,8 @@
 //! template directory is configured via the `template_dir` configuration
 //! parameter and defaults to `templates/`. The path set in `template_dir` is
 //! relative to the Rocket configuration file. See the [configuration
-//! chapter](https://rocket.rs/master/guide/configuration/#extras) of the guide
-//! for more information on configuration.
+//! chapter](https://rocket.rs/master/guide/configuration) of the guide for more
+//! information on configuration.
 //!
 //! The corresponding templating engine used for a given template is based on a
 //! template's extension. At present, this library supports the following
@@ -93,9 +86,10 @@
 //! Any file that ends with one of these extension will be discovered and
 //! rendered with the corresponding templating engine. The _name_ of the
 //! template will be the path to the template file relative to `template_dir`
-//! minus at most two extensions. The following table illustrates this mapping:
+//! minus at most two extensions. The following table contains examples of this
+//! mapping:
 //!
-//! | path                                          | name                  |
+//! | example template path                         | template name         |
 //! |-----------------------------------------------|-----------------------|
 //! | {template_dir}/index.html.hbs                 | index                 |
 //! | {template_dir}/index.tera                     | index                 |
@@ -109,32 +103,58 @@
 //! type, and one for the template extension. This means that template
 //! extensions should look like: `.html.hbs`, `.html.tera`, `.xml.hbs`, etc.
 //!
-//! ## Template Fairing
+//! ## Template Fairing and Customization
 //!
 //! Template discovery is actualized by the template fairing, which itself is
 //! created via [`Template::fairing()`], [`Template::custom()`], or
 //! [`Template::try_custom()`], the latter two allowing customizations to
-//! enabled templating engines. In order for _any_ templates to be rendered, the
-//! template fairing _must_ be [attached](rocket::Rocket::attach()) to the
-//! running Rocket instance. Failure to do so will result in a run-time error.
+//! templating engines such as registering template helpers and register
+//! templates from strings.
+//!
+//! In order for _any_ templates to be rendered, the template fairing _must_ be
+//! [attached](rocket::Rocket::attach()) to the running Rocket instance. Failure
+//! to do so will result in an ignite-time error.
+//!
+//! ## Rendering
 //!
 //! Templates are rendered with the `render` method. The method takes in the
 //! name of a template and a context to render the template with. The context
 //! can be any type that implements [`Serialize`] from [`serde`] and would
 //! serialize to an `Object` value.
 //!
-//! In debug mode (without the `--release` flag passed to `rocket`), templates
+//! ## Automatic Reloading
+//!
+//! In debug mode (without the `--release` flag passed to `cargo`), templates
 //! will be automatically reloaded from disk if any changes have been made to
 //! the templates directory since the previous request. In release builds,
 //! template reloading is disabled to improve performance and cannot be enabled.
 //!
 //! [`Serialize`]: serde::Serialize
 
-#[cfg(feature = "tera_templates")] pub extern crate tera;
-#[cfg(feature = "tera_templates")] mod tera_templates;
+#![doc(html_root_url = "https://api.rocket.rs/master/rocket_dyn_templates")]
+#![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
+#![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
-#[cfg(feature = "handlebars_templates")] pub extern crate handlebars;
-#[cfg(feature = "handlebars_templates")] mod handlebars_templates;
+#[macro_use] extern crate rocket;
+
+#[cfg(not(any(feature = "tera", feature = "handlebars")))]
+compile_error!("at least one of \"tera\" or \"handlebars\" features must be enabled");
+
+/// The tera templating engine library, reexported.
+#[doc(inline)]
+#[cfg(feature = "tera")]
+pub use _tera as tera;
+
+#[cfg(feature = "tera")]
+mod tera_templates;
+
+/// The handlebars templating engine library, reexported.
+#[doc(inline)]
+#[cfg(feature = "handlebars")]
+pub use _handlebars as handlebars;
+
+#[cfg(feature = "handlebars")]
+mod handlebars_templates;
 
 mod engine;
 mod fairing;
@@ -144,7 +164,6 @@ mod metadata;
 pub use self::engine::Engines;
 pub use self::metadata::Metadata;
 
-use self::engine::Engine;
 use self::fairing::TemplateFairing;
 use self::context::{Context, ContextManager};
 
@@ -169,56 +188,7 @@ const DEFAULT_TEMPLATE_DIR: &str = "templates";
 /// contain the rendered template itself. The template is lazily rendered, at
 /// response time. To render a template greedily, use [`Template::show()`].
 ///
-/// # Usage
-///
-/// To use, add the `handlebars_templates` feature, the `tera_templates`
-/// feature, or both, to the `rocket_contrib` dependencies section of your
-/// `Cargo.toml`:
-///
-/// ```toml
-/// [dependencies.rocket_contrib]
-/// version = "0.5.0-dev"
-/// default-features = false
-/// features = ["handlebars_templates", "tera_templates"]
-/// ```
-///
-/// Then, ensure that the template [`Fairing`] is attached to your Rocket
-/// application:
-///
-/// ```rust
-/// # extern crate rocket;
-/// # extern crate rocket_contrib;
-/// use rocket_contrib::templates::Template;
-///
-/// fn main() {
-///     rocket::build()
-///         .attach(Template::fairing())
-///         // ...
-///     # ;
-/// }
-/// ```
-///
-/// The `Template` type implements Rocket's [`Responder`] trait, so it can be
-/// returned from a request handler directly:
-///
-/// ```rust
-/// # #[macro_use] extern crate rocket;
-/// # #[macro_use] extern crate rocket_contrib;
-/// # fn context() {  }
-/// use rocket_contrib::templates::Template;
-///
-/// #[get("/")]
-/// fn index() -> Template {
-///     let context = context();
-///     Template::render("index", &context)
-/// }
-/// ```
-///
-/// # Helpers, Filters, and Customization
-///
-/// You may use the [`Template::custom()`] method to construct a fairing with
-/// customized templating engines. Among other things, this method allows you to
-/// register template helpers and register templates from strings.
+/// See the [crate root](crate) for usage details.
 #[derive(Debug)]
 pub struct Template {
     name: Cow<'static, str>,
@@ -254,9 +224,9 @@ impl Template {
     ///
     /// ```rust
     /// extern crate rocket;
-    /// extern crate rocket_contrib;
+    /// extern crate rocket_dyn_templates;
     ///
-    /// use rocket_contrib::templates::Template;
+    /// use rocket_dyn_templates::Template;
     ///
     /// fn main() {
     ///     rocket::build()
@@ -283,9 +253,9 @@ impl Template {
     ///
     /// ```rust
     /// extern crate rocket;
-    /// extern crate rocket_contrib;
+    /// extern crate rocket_dyn_templates;
     ///
-    /// use rocket_contrib::templates::Template;
+    /// use rocket_dyn_templates::Template;
     ///
     /// fn main() {
     ///     rocket::build()
@@ -314,9 +284,9 @@ impl Template {
     ///
     /// ```rust
     /// extern crate rocket;
-    /// extern crate rocket_contrib;
+    /// extern crate rocket_dyn_templates;
     ///
-    /// use rocket_contrib::templates::Template;
+    /// use rocket_dyn_templates::Template;
     ///
     /// fn main() {
     ///     rocket::build()
@@ -343,7 +313,7 @@ impl Template {
     ///
     /// ```rust
     /// use std::collections::HashMap;
-    /// use rocket_contrib::templates::Template;
+    /// use rocket_dyn_templates::Template;
     ///
     /// // Create a `context`. Here, just an empty `HashMap`.
     /// let mut context = HashMap::new();
@@ -376,10 +346,10 @@ impl Template {
     ///
     /// ```rust,no_run
     /// # extern crate rocket;
-    /// # extern crate rocket_contrib;
+    /// # extern crate rocket_dyn_templates;
     /// use std::collections::HashMap;
     ///
-    /// use rocket_contrib::templates::Template;
+    /// use rocket_dyn_templates::Template;
     /// use rocket::local::blocking::Client;
     ///
     /// fn main() {

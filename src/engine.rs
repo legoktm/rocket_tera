@@ -3,10 +3,10 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 
-use crate::templates::TemplateInfo;
+use crate::TemplateInfo;
 
-#[cfg(feature = "tera_templates")] use crate::templates::tera::Tera;
-#[cfg(feature = "handlebars_templates")] use crate::templates::handlebars::Handlebars;
+#[cfg(feature = "tera")] use crate::tera::Tera;
+#[cfg(feature = "handlebars")] use crate::handlebars::Handlebars;
 
 pub(crate) trait Engine: Send + Sync + Sized + 'static {
     const EXT: &'static str;
@@ -19,17 +19,17 @@ pub(crate) trait Engine: Send + Sync + Sized + 'static {
 ///
 /// Calling methods on the exposed template engine types may require importing
 /// types from the respective templating engine library. These types should be
-/// imported from the reexported crate at the root of `rocket_contrib` to avoid
-/// version mismatches. For instance, when registering a Tera filter, the
+/// imported from the reexported crate at the root of `rocket_dyn_templates` to
+/// avoid version mismatches. For instance, when registering a Tera filter, the
 /// [`tera::Value`] and [`tera::Result`] types are required. Import them from
-/// `rocket_contrib::templates::tera`. The example below illustrates this:
+/// `rocket_dyn_templates::tera`. The example below illustrates this:
 ///
 /// ```rust
-/// # #[cfg(feature = "tera_templates")] {
+/// # #[cfg(feature = "tera")] {
 /// use std::collections::HashMap;
 ///
-/// use rocket_contrib::templates::{Template, Engines};
-/// use rocket_contrib::templates::tera::{self, Value};
+/// use rocket_dyn_templates::{Template, Engines};
+/// use rocket_dyn_templates::tera::{self, Value};
 ///
 /// fn my_filter(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
 ///     # /*
@@ -49,27 +49,27 @@ pub(crate) trait Engine: Send + Sync + Sized + 'static {
 /// # }
 /// ```
 ///
-/// [`tera::Value`]: crate::templates::tera::Value
-/// [`tera::Result`]: crate::templates::tera::Result
+/// [`tera::Value`]: crate::tera::Value
+/// [`tera::Result`]: crate::tera::Result
 pub struct Engines {
     /// A `Tera` templating engine. This field is only available when the
     /// `tera_templates` feature is enabled. When calling methods on the `Tera`
     /// instance, ensure you use types imported from
-    /// `rocket_contrib::templates::tera` to avoid version mismatches.
-    #[cfg(feature = "tera_templates")]
+    /// `rocket_dyn_templates::tera` to avoid version mismatches.
+    #[cfg(feature = "tera")]
     pub tera: Tera,
     /// The Handlebars templating engine. This field is only available when the
     /// `handlebars_templates` feature is enabled. When calling methods on the
     /// `Tera` instance, ensure you use types imported from
-    /// `rocket_contrib::templates::handlebars` to avoid version mismatches.
-    #[cfg(feature = "handlebars_templates")]
+    /// `rocket_dyn_templates::handlebars` to avoid version mismatches.
+    #[cfg(feature = "handlebars")]
     pub handlebars: Handlebars<'static>,
 }
 
 impl Engines {
     pub(crate) const ENABLED_EXTENSIONS: &'static [&'static str] = &[
-        #[cfg(feature = "tera_templates")] Tera::EXT,
-        #[cfg(feature = "handlebars_templates")] Handlebars::EXT,
+        #[cfg(feature = "tera")] Tera::EXT,
+        #[cfg(feature = "handlebars")] Handlebars::EXT,
     ];
 
     pub(crate) fn init(templates: &HashMap<String, TemplateInfo>) -> Option<Engines> {
@@ -83,12 +83,12 @@ impl Engines {
         }
 
         Some(Engines {
-            #[cfg(feature = "tera_templates")]
+            #[cfg(feature = "tera")]
             tera: match inner::<Tera>(templates) {
                 Some(tera) => tera,
                 None => return None
             },
-            #[cfg(feature = "handlebars_templates")]
+            #[cfg(feature = "handlebars")]
             handlebars: match inner::<Handlebars<'static>>(templates) {
                 Some(hb) => hb,
                 None => return None
@@ -102,13 +102,13 @@ impl Engines {
         info: &TemplateInfo,
         context: C
     ) -> Option<String> {
-        #[cfg(feature = "tera_templates")] {
+        #[cfg(feature = "tera")] {
             if info.engine_ext == Tera::EXT {
                 return Engine::render(&self.tera, name, context);
             }
         }
 
-        #[cfg(feature = "handlebars_templates")] {
+        #[cfg(feature = "handlebars")] {
             if info.engine_ext == Handlebars::EXT {
                 return Engine::render(&self.handlebars, name, context);
             }
@@ -119,20 +119,24 @@ impl Engines {
 
     /// Returns iterator over template (name, engine_extension).
     pub(crate) fn templates(&self) -> impl Iterator<Item = (&str, &'static str)> {
-        #[cfg(all(feature = "tera_templates", feature = "handlebars_templates"))] {
+        #[cfg(all(feature = "tera", feature = "handlebars"))] {
             self.tera.get_template_names()
                 .map(|name| (name, Tera::EXT))
                 .chain(self.handlebars.get_templates().keys()
                     .map(|name| (name.as_str(), Handlebars::EXT)))
         }
 
-        #[cfg(all(feature = "tera_templates", not(feature = "handlebars_templates")))] {
+        #[cfg(all(feature = "tera", not(feature = "handlebars")))] {
             self.tera.get_template_names().map(|name| (name, Tera::EXT))
         }
 
-        #[cfg(all(feature = "handlebars_templates", not(feature = "tera_templates")))] {
+        #[cfg(all(feature = "handlebars", not(feature = "tera")))] {
             self.handlebars.get_templates().keys()
                 .map(|name| (name.as_str(), Handlebars::EXT))
+        }
+
+        #[cfg(not(any(feature = "tera", feature = "handlebars")))] {
+            None.into_iter()
         }
     }
 }

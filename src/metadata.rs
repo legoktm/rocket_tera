@@ -2,7 +2,7 @@ use rocket::{Request, Rocket, Ignite, Sentinel};
 use rocket::http::Status;
 use rocket::request::{self, FromRequest};
 
-use crate::templates::context::ContextManager;
+use crate::context::ContextManager;
 
 /// Request guard for dynamically querying template metadata.
 ///
@@ -13,8 +13,8 @@ use crate::templates::context::ContextManager;
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # #[macro_use] extern crate rocket_contrib;
-/// use rocket_contrib::templates::{Template, Metadata};
+/// # #[macro_use] extern crate rocket_dyn_templates;
+/// use rocket_dyn_templates::{Template, Metadata};
 ///
 /// #[get("/")]
 /// fn homepage(metadata: Metadata) -> Template {
@@ -45,9 +45,9 @@ impl Metadata<'_> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// # extern crate rocket_contrib;
+    /// # extern crate rocket_dyn_templates;
     /// #
-    /// use rocket_contrib::templates::Metadata;
+    /// use rocket_dyn_templates::Metadata;
     ///
     /// #[get("/")]
     /// fn handler(metadata: Metadata) {
@@ -65,9 +65,9 @@ impl Metadata<'_> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// # extern crate rocket_contrib;
+    /// # extern crate rocket_dyn_templates;
     /// #
-    /// use rocket_contrib::templates::Metadata;
+    /// use rocket_dyn_templates::Metadata;
     ///
     /// #[get("/")]
     /// fn handler(metadata: Metadata) {
