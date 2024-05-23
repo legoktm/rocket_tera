@@ -79,7 +79,7 @@
 //! See the [configuration chapter] of the guide for more information on
 //! configuration.
 //!
-//! [configuration chapter]: https://rocket.rs/master/guide/configuration
+//! [configuration chapter]: https://rocket.rs/v0.5/guide/configuration
 //!
 //! ## Template Naming and Content-Types
 //!
