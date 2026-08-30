@@ -1,33 +1,15 @@
-# `dyn_templates` [![ci.svg]][ci] [![crates.io]][crate] [![docs.svg]][crate docs]
+# `rocket_tera` [![crates.io]][crate]
 
-[crates.io]: https://img.shields.io/crates/v/rocket_dyn_templates.svg
-[crate]: https://crates.io/crates/rocket_dyn_templates
-[docs.svg]: https://img.shields.io/badge/web-master-red.svg?style=flat&label=docs&colorB=d33847
-[crate docs]: https://api.rocket.rs/master/rocket_dyn_templates
-[ci.svg]: https://github.com/rwf2/Rocket/workflows/CI/badge.svg
-[ci]: https://github.com/rwf2/Rocket/actions
+[crates.io]: https://img.shields.io/crates/v/rocket_tera.svg
+[crate]: https://crates.io/crates/rocket_tera
 
-This crate adds support for dynamic template rendering to Rocket. It
+This crate adds support for using [Tera](https://keats.github.io/tera/) with Rocket. It
 automatically discovers templates, provides a `Responder` to render templates,
-and automatically reloads templates when compiled in debug mode. It supports [Handlebars], [Tera] and [MiniJinja].
-
-[Tera]: https://docs.rs/crate/tera/1
-[Handlebars]: https://docs.rs/crate/handlebars/5
-[MiniJinja]: https://docs.rs/crate/minijinja/2.0.1
+and automatically reloads templates when compiled in debug mode.
 
 # Usage
 
-  1. Enable the `rocket_dyn_templates` feature corresponding to your templating
-     engine(s) of choice:
-
-     ```toml
-     [dependencies.rocket_dyn_templates]
-     version = "0.1.0"
-     features = ["handlebars", "tera", "minijinja"]
-     ```
-
-  1. Write your template files in Handlebars (`.hbs`) and/or Tera (`.tera`) in
-     the configurable `template_dir` directory (default:
+  1. Write your template files in the configurable `template_dir` directory (default:
      `{rocket_root}/templates`).
 
   2. Attach `Template::fairing()` and return a `Template` using
@@ -35,7 +17,7 @@ and automatically reloads templates when compiled in debug mode. It supports [Ha
      last two extensions**:
 
      ```rust
-     use rocket_dyn_templates::{Template, context};
+     use rocket_tera::{Template, context};
 
      #[get("/")]
      fn index() -> Template {
@@ -48,4 +30,8 @@ and automatically reloads templates when compiled in debug mode. It supports [Ha
      }
      ```
 
-See the [crate docs] for full details.
+See the [crate docs](https://docs.rs/rocket_tera) for full details.
+
+# History
+
+This was originally forked from the `rocket_dyn_templates` crate, which was maintained as part of Rocket upstream.
