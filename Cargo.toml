@@ -1,11 +1,11 @@
 [package]
-name = "rocket_dyn_templates"
+name = "rocket_tera"
 version = "0.1.0"
-authors = ["Sergio Benitez <sb@sergio.bz>"]
-description = "Dynamic templating engine integration for Rocket."
-documentation = "https://api.rocket.rs/master/rocket_dyn_templates/"
-homepage = "https://rocket.rs"
-repository = "https://github.com/rwf2/Rocket/tree/master/contrib/dyn_templates"
+authors = ["Sergio Benitez <sb@sergio.bz>", "Kunal Mehta <legoktm@debian.org>"]
+description = "Tera templating integration for Rocket."
+documentation = "https://docs.rs/rocket_tera"
+homepage = "https://github.com/legoktm/rocket_tera"
+repository = "https://github.com/legoktm/rocket_tera"
 readme = "README.md"
 keywords = ["rocket", "framework", "templates", "templating", "tera"]
 license = "MIT OR Apache-2.0"
@@ -13,7 +13,6 @@ edition = "2021"
 rust-version = "1.75"
 
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(nightly)'] }
 rust_2018_idioms = { level = "warn", priority = -1 }
 async_fn_in_trait = "allow"
 refining_impl_trait = { level = "allow", priority = -1 }
@@ -35,8 +34,7 @@ normpath = "1"
 tera = "1.19.0"
 
 [dependencies.rocket]
-version = "0.6.0-dev"
-git = "https://github.com/rwf2/Rocket"
+version = "0.5.1"
 default-features = false
 
 [dev-dependencies]

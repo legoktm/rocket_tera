@@ -1,18 +1,12 @@
 //! Tera templating support for Rocket.
 //!
-//! This crate adds support for dynamic template rendering to Rocket. It
-//! automatically discovers templates, provides a `Responder` to render
-//! templates, and automatically reloads templates when compiled in debug mode.
-//! At present, it supports [Tera].
+//! This crate adds support for using [Tera](https://keats.github.io/tera/) with Rocket. It
+//! automatically discovers templates, provides a `Responder` to render templates,
+//! and automatically reloads templates when compiled in debug mode.
 //!
 //! # Usage
 //!
-//!   1. Depend on `rocket_dyn_templates`:
-//!
-//!      ```toml
-//!      [dependencies]
-//!      rocket_dyn_templates = "0.1.0"
-//!      ```
+//!   1. Depend on the crate: `cargo add rocket_tera`
 //!
 //!   2. Write your templates inside of the [configurable]
 //!      `${ROCKET_ROOT}/templates`. The filename _must_ end with an extension
@@ -28,7 +22,7 @@
 //!
 //!      ```rust
 //!      # #[macro_use] extern crate rocket;
-//!      use rocket_dyn_templates::{Template, context};
+//!      use rocket_tera::{Template, context};
 //!
 //!      #[get("/")]
 //!      fn index() -> Template {
@@ -69,7 +63,7 @@
 //! See the [configuration chapter] of the guide for more information on
 //! configuration.
 //!
-//! [configuration chapter]: https://rocket.rs/master/guide/configuration
+//! [configuration chapter]: https://rocket.rs/guide/v0.5/configuration/
 //!
 //! ## Template Naming and Content-Types
 //!
@@ -110,7 +104,7 @@
 //! ```rust
 //! # #[macro_use] extern crate rocket;
 //! use rocket::serde::Serialize;
-//! use rocket_dyn_templates::{Template, context};
+//! use rocket_tera::{Template, context};
 //!
 //! #[get("/")]
 //! fn index() -> Template {
@@ -163,10 +157,6 @@
 //! metadata, such as whether a template is known to exist
 //! ([`Metadata::contains_template()`]), and to render templates to `String`
 //! ([`Metadata::render()`]).
-
-#![doc(html_root_url = "https://api.rocket.rs/master/rocket_dyn_templates")]
-#![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
-#![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
 #[macro_use]
 extern crate rocket;

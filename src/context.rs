@@ -50,14 +50,17 @@ impl Context {
 
             let (template, data_type_str) = split_path(&root, entry.path());
             if let Some(info) = templates.get(&*template) {
-                warn!(
-                    %template,
-                    first_path = %entry.path().display(),
-                    second_path = info.path.as_ref().map(|p| display(p.display())),
-                    data_type = %info.data_type,
-                    "Template name '{template}' can refer to multiple templates.\n\
-                     First path will be used. Second path is ignored."
+                warn_!(
+                    "Template name '{}' does not have a unique source.",
+                    template
                 );
+                match info.path {
+                    Some(ref path) => info_!("Existing path: {:?}", path),
+                    None => info_!("Existing Content-Type: {}", info.data_type),
+                }
+
+                info_!("Additional path: {:?}", entry.path());
+                warn_!("Keeping existing template '{}'.", template);
 
                 continue;
             }
@@ -78,7 +81,8 @@ impl Context {
 
         let mut engines = Engines::init(&templates)?;
         if let Err(reason) = callback(&mut engines) {
-            error!(%reason, "template customization callback failed");
+            error_!("Template customization callback failed.");
+            error_!("{}", reason);
             return None;
         }
 

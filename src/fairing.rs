@@ -1,6 +1,5 @@
 use rocket::fairing::{self, Fairing, Info, Kind};
 use rocket::figment::{value::magic::RelativePathBuf, Source};
-use rocket::trace::Trace;
 use rocket::{Build, Orbit, Rocket};
 
 use crate::context::{Callback, Context, ContextManager};
@@ -46,7 +45,7 @@ impl Fairing for TemplateFairing {
             Ok(dir) => dir,
             Err(e) if e.missing() => DEFAULT_TEMPLATE_DIR.into(),
             Err(e) => {
-                e.trace_error();
+                error_!("Invalid `template_dir` configuration: {}", e);
                 return Err(rocket);
             }
         };
@@ -54,7 +53,7 @@ impl Fairing for TemplateFairing {
         if let Some(ctxt) = Context::initialize(&path, &self.callback) {
             Ok(rocket.manage(ContextManager::new(ctxt)))
         } else {
-            error!("Template initialization failed. Aborting launch.");
+            error_!("Template initialization failed. Aborting launch.");
             Err(rocket)
         }
     }
@@ -64,10 +63,11 @@ impl Fairing for TemplateFairing {
             .state::<ContextManager>()
             .expect("Template ContextManager registered in on_ignite");
 
-        span_info!("templating" => {
-            info!(directory = %Source::from(&*cm.context().root));
-            info!(engine = engine::EXT);
-        });
+        use rocket::{log::PaintExt, yansi::Paint};
+
+        info!("{}{}:", "📐 ".emoji(), "Templating".magenta());
+        info_!("directory: {}", Source::from(&*cm.context().root).primary());
+        info_!("engine: {}", engine::EXT.primary());
     }
 
     #[cfg(debug_assertions)]

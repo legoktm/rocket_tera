@@ -17,8 +17,8 @@ use crate::{context::ContextManager, Template};
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # #[macro_use] extern crate rocket_dyn_templates;
-/// use rocket_dyn_templates::{Template, Metadata, context};
+/// # #[macro_use] extern crate rocket_tera;
+/// use rocket_tera::{Template, Metadata, context};
 ///
 /// #[get("/")]
 /// fn homepage(metadata: Metadata) -> Template {
@@ -48,9 +48,9 @@ impl Metadata<'_> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// # extern crate rocket_dyn_templates;
+    /// # extern crate rocket_tera;
     /// #
-    /// use rocket_dyn_templates::Metadata;
+    /// use rocket_tera::Metadata;
     ///
     /// #[get("/")]
     /// fn handler(metadata: Metadata) {
@@ -68,9 +68,9 @@ impl Metadata<'_> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// # extern crate rocket_dyn_templates;
+    /// # extern crate rocket_tera;
     /// #
-    /// use rocket_dyn_templates::Metadata;
+    /// use rocket_tera::Metadata;
     ///
     /// #[get("/")]
     /// fn handler(metadata: Metadata) {
@@ -91,7 +91,7 @@ impl Metadata<'_> {
     /// ```rust
     /// # #[macro_use] extern crate rocket;
     /// use rocket::http::ContentType;
-    /// use rocket_dyn_templates::{Metadata, Template, context};
+    /// use rocket_tera::{Metadata, Template, context};
     ///
     /// #[get("/")]
     /// fn send_email(metadata: Metadata) -> Option<()> {

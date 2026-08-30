@@ -7,7 +7,7 @@ use rocket::config::Config;
 use rocket::figment::value::Value;
 use rocket::serde::{Deserialize, Serialize};
 use rocket::{Build, Rocket};
-use rocket_dyn_templates::{context, Metadata, Template};
+use rocket_tera::{context, Metadata, Template};
 
 #[get("/<engine>/<name>")]
 fn template_check(md: Metadata<'_>, engine: &str, name: &str) -> Option<()> {

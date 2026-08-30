@@ -7,7 +7,7 @@ mod tera;
 mod tests;
 
 use rocket::response::content::RawHtml;
-use rocket_dyn_templates::Template;
+use rocket_tera::Template;
 
 #[get("/")]
 fn index() -> RawHtml<&'static str> {

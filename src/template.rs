@@ -7,7 +7,6 @@ use rocket::http::{ContentType, Status};
 use rocket::request::Request;
 use rocket::response::{self, Responder};
 use rocket::serde::Serialize;
-use rocket::trace::Trace;
 use rocket::{Ignite, Orbit, Rocket, Sentinel};
 
 use crate::context::{Context, ContextManager};
@@ -56,9 +55,9 @@ impl Template {
     ///
     /// ```rust
     /// extern crate rocket;
-    /// extern crate rocket_dyn_templates;
+    /// extern crate rocket_tera;
     ///
-    /// use rocket_dyn_templates::Template;
+    /// use rocket_tera::Template;
     ///
     /// fn main() {
     ///     rocket::build()
@@ -84,9 +83,9 @@ impl Template {
     ///
     /// ```rust
     /// extern crate rocket;
-    /// extern crate rocket_dyn_templates;
+    /// extern crate rocket_tera;
     ///
-    /// use rocket_dyn_templates::Template;
+    /// use rocket_tera::Template;
     ///
     /// fn main() {
     ///     rocket::build()
@@ -119,9 +118,9 @@ impl Template {
     ///
     /// ```rust
     /// extern crate rocket;
-    /// extern crate rocket_dyn_templates;
+    /// extern crate rocket_tera;
     ///
-    /// use rocket_dyn_templates::Template;
+    /// use rocket_tera::Template;
     ///
     /// fn main() {
     ///     rocket::build()
@@ -156,7 +155,7 @@ impl Template {
     /// Using the `context` macro:
     ///
     /// ```rust
-    /// use rocket_dyn_templates::{Template, context};
+    /// use rocket_tera::{Template, context};
     ///
     /// let template = Template::render("index", context! {
     ///     foo: "Hello, world!",
@@ -167,7 +166,7 @@ impl Template {
     ///
     /// ```rust
     /// use std::collections::HashMap;
-    /// use rocket_dyn_templates::Template;
+    /// use rocket_tera::Template;
     ///
     /// // Create a `context` from a `HashMap`.
     /// let mut context = HashMap::new();
@@ -204,10 +203,10 @@ impl Template {
     ///
     /// ```rust,no_run
     /// # extern crate rocket;
-    /// # extern crate rocket_dyn_templates;
+    /// # extern crate rocket_tera;
     /// use std::collections::HashMap;
     ///
-    /// use rocket_dyn_templates::Template;
+    /// use rocket_tera::Template;
     /// use rocket::local::blocking::Client;
     ///
     /// fn main() {
@@ -253,21 +252,20 @@ impl Template {
         let template = &*self.name;
         let info = ctxt.templates.get(template).ok_or_else(|| {
             let ts: Vec<_> = ctxt.templates.keys().map(|s| s.as_str()).collect();
-            error!(
-                %template, search_path = %ctxt.root.display(), known_templates = ?ts,
-                "requested template not found"
-            );
+            error_!("Template '{}' does not exist.", template);
+            info_!("Known templates: {}.", ts.join(", "));
+            info_!("Searched in {:?}.", ctxt.root);
 
             Status::InternalServerError
         })?;
 
         let value = self.value.map_err(|e| {
-            span_error!("templating", "template context failed to serialize" => e.trace_error());
+            error_!("Template context failed to serialize: {}.", e);
             Status::InternalServerError
         })?;
 
         let string = ctxt.engines.render(template, value).ok_or_else(|| {
-            error!(template, "template failed to render");
+            error_!("Template '{}' failed to render.", template);
             Status::InternalServerError
         })?;
 
@@ -321,7 +319,7 @@ impl Sentinel for Template {
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # use rocket_dyn_templates::{Template, context};
+/// # use rocket_tera::{Template, context};
 /// #[get("/<foo>")]
 /// fn render_index(foo: u64) -> Template {
 ///     Template::render("index", context! {
@@ -337,7 +335,7 @@ impl Sentinel for Template {
 /// `IndexContext` struct:
 ///
 /// ```rust
-/// # use rocket_dyn_templates::Template;
+/// # use rocket_tera::Template;
 /// # use rocket::serde::Serialize;
 /// # use rocket::get;
 /// #[derive(Serialize)]
@@ -361,7 +359,7 @@ impl Sentinel for Template {
 /// Nested objects can be created by nesting calls to `context!`:
 ///
 /// ```rust
-/// # use rocket_dyn_templates::context;
+/// # use rocket_tera::context;
 /// # fn main() {
 /// let ctx = context! {
 ///     planet: "Earth",
