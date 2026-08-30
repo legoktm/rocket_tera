@@ -1,8 +1,8 @@
 use super::rocket;
 
-use rocket::http::{RawStr, Status, Method::*};
+use rocket::http::{Method::*, RawStr, Status};
 use rocket::local::blocking::Client;
-use rocket_tera::{Template, context};
+use rocket_tera::{context, Template};
 
 fn test_root(kind: &str) {
     // Check that the redirect works.
@@ -30,7 +30,9 @@ fn test_root(kind: &str) {
 fn test_name(base: &str) {
     // Check that the /hello/<name> route works.
     let client = Client::tracked(rocket()).unwrap();
-    let response = client.get(format!("/{}/hello/Jack%20Daniels", base)).dispatch();
+    let response = client
+        .get(format!("/{}/hello/Jack%20Daniels", base))
+        .dispatch();
     assert_eq!(response.status(), Status::Ok);
     assert!(response.into_string().unwrap().contains("Hi Jack Daniels!"));
 }
@@ -57,7 +59,10 @@ fn test_404(base: &str) {
 fn test_about(base: &str) {
     let client = Client::tracked(rocket()).unwrap();
     let response = client.get(format!("/{}/about", base)).dispatch();
-    assert!(response.into_string().unwrap().contains("About - Here's another page!"));
+    assert!(response
+        .into_string()
+        .unwrap()
+        .contains("About - Here's another page!"));
 }
 
 #[test]

@@ -39,3 +39,9 @@ default-features = false
 
 [dev-dependencies]
 pretty_assertions = "1.4"
+
+# `examples/templating/` is a directory-style example; `test = true` keeps its
+# `#[test]`s running under `cargo test`.
+[[example]]
+name = "templating"
+test = true
