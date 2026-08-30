@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  msrv:
+    name: Resolve MSRV
+    runs-on: ubuntu-latest
+    outputs:
+      toolchain: ${{ steps.parse.outputs.toolchain }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read rust-version from Cargo.toml
+        id: parse
+        shell: bash
+        run: |
+          toolchain="$(cargo metadata --format-version 1 --no-deps --offline \
+            | jq -er '.packages[0].rust_version')"
+          echo "Resolved MSRV: $toolchain"
+          echo "toolchain=$toolchain" >> "$GITHUB_OUTPUT"
+
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install toolchain
+        run: rustup toolchain install stable --profile minimal --component rustfmt --no-self-update
+
+      - name: rustfmt
+        run: cargo +stable fmt --all --check
+
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install toolchain
+        run: rustup toolchain install stable --profile minimal --component clippy --no-self-update
+
+      - name: clippy
+        run: cargo +stable clippy --all-targets -- -D warnings
+
+  rustdoc:
+    name: rustdoc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install toolchain
+        # Nightly: `rustdoc::all` includes lints that are nightly-only, notably
+        # `bare_urls` and `unescaped_backticks`.
+        run: rustup toolchain install nightly --profile minimal --no-self-update
+
+      - name: rustdoc
+        env:
+          RUSTDOCFLAGS: -D warnings -D rustdoc::all
+        run: cargo +nightly doc --no-deps
+
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    needs: msrv
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: MSRV, toolchain: "${{ needs.msrv.outputs.toolchain }}" }
+          - { name: stable, toolchain: stable }
+          - { name: nightly, toolchain: nightly }
+    # Nightly tracks unreleased changes; let it report without failing the build.
+    continue-on-error: ${{ matrix.toolchain == 'nightly' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install toolchain
+        run: rustup toolchain install ${MATRIX_TOOLCHAIN} --profile minimal --no-self-update
+        env:
+          MATRIX_TOOLCHAIN: ${{ matrix.toolchain }}
+
+      - name: test
+        run: cargo +${MATRIX_TOOLCHAIN} test
+        env:
+          MATRIX_TOOLCHAIN: ${{ matrix.toolchain }}
