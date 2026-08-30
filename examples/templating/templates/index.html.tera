@@ -1,4 +1,4 @@
-{% extends "tera/base" %}
+{% extends "base" %}
 
 {% block content %}
     <h1>Hi {{ name }}!</h1>
@@ -9,5 +9,5 @@
         {% endfor %}
     </ul>
 
-    <p>Try going to <a href="/tera/hello/Your%20Name">/tera/hello/Your Name</a></p>
+    <p>Try going to <a href="/hello/Your%20Name">/hello/Your Name</a></p>
 {% endblock content %}

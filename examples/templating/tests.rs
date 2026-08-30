@@ -4,80 +4,65 @@ use rocket::http::{Method::*, RawStr, Status};
 use rocket::local::blocking::Client;
 use rocket_tera::{Template, context};
 
-fn test_root(kind: &str) {
-    // Check that the redirect works.
+#[test]
+fn test_root_redirects() {
     let client = Client::tracked(rocket()).unwrap();
     for method in &[Get, Head] {
-        let response = client.req(*method, format!("/{}", kind)).dispatch();
+        let response = client.req(*method, "/").dispatch();
         assert_eq!(response.status(), Status::SeeOther);
         assert!(response.body().is_none());
 
         let location = response.headers().get_one("Location").unwrap();
-        assert_eq!(location, format!("/{}/hello/Your%20Name", kind));
+        assert_eq!(location, "/hello/Your%20Name");
     }
+}
 
-    // Check that other request methods are not accepted (and instead caught).
+#[test]
+fn test_root_other_methods_are_caught() {
+    let client = Client::tracked(rocket()).unwrap();
     for method in &[Post, Put, Delete, Options, Trace, Connect, Patch] {
-        let context = context! { uri: format!("/{}", kind) };
-        let expected = Template::show(client.rocket(), format!("{}/error/404", kind), &context);
+        let context = context! { uri: "/" };
+        let expected = Template::show(client.rocket(), "error/404", &context);
 
-        let response = client.req(*method, format!("/{}", kind)).dispatch();
+        let response = client.req(*method, "/").dispatch();
         assert_eq!(response.status(), Status::NotFound);
         assert_eq!(response.into_string(), expected);
     }
 }
 
-fn test_name(base: &str) {
-    // Check that the /hello/<name> route works.
+#[test]
+fn test_hello() {
     let client = Client::tracked(rocket()).unwrap();
-    let response = client
-        .get(format!("/{}/hello/Jack%20Daniels", base))
-        .dispatch();
+    let response = client.get("/hello/Jack%20Daniels").dispatch();
     assert_eq!(response.status(), Status::Ok);
     assert!(response.into_string().unwrap().contains("Hi Jack Daniels!"));
 }
 
-fn test_404(base: &str) {
-    // Check that the error catcher works.
+#[test]
+fn test_404() {
     let client = Client::tracked(rocket()).unwrap();
-    for bad_path in &["/hello", "/foo/bar", "/404"] {
-        let path = format!("/{}{}", base, bad_path);
-        let escaped_path = RawStr::new(&path).html_escape().to_lowercase();
+    for path in &["/hello", "/foo/bar", "/404"] {
+        let escaped = RawStr::new(path).html_escape().to_lowercase();
 
-        let response = client.get(&path).dispatch();
+        let response = client.get(*path).dispatch();
         assert_eq!(response.status(), Status::NotFound);
         let response = response.into_string().unwrap().to_lowercase();
 
-        assert!(response.contains(base));
         assert! {
             response.contains(&format!("{} does not exist", path))
-                || response.contains(&format!("{} does not exist", escaped_path))
+                || response.contains(&format!("{} does not exist", escaped))
         };
     }
 }
 
-fn test_about(base: &str) {
+#[test]
+fn test_about() {
     let client = Client::tracked(rocket()).unwrap();
-    let response = client.get(format!("/{}/about", base)).dispatch();
+    let response = client.get("/about").dispatch();
     assert!(
         response
             .into_string()
             .unwrap()
             .contains("About - Here's another page!")
     );
-}
-
-#[test]
-fn test_index() {
-    let client = Client::tracked(rocket()).unwrap();
-    let response = client.get("/").dispatch().into_string().unwrap();
-    assert!(response.contains("Tera"));
-}
-
-#[test]
-fn tera() {
-    test_root("tera");
-    test_name("tera");
-    test_404("tera");
-    test_about("tera");
 }
