@@ -26,7 +26,5 @@ fn rocket() -> _ {
         .mount("/", routes![index])
         .mount("/tera", routes![tera::index, tera::hello, tera::about])
         .register("/tera", catchers![tera::not_found])
-        .attach(Template::custom(|engines| {
-            tera::customize(&mut engines.tera);
-        }))
+        .attach(Template::customize(tera::customize))
 }

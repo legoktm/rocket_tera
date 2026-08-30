@@ -2,22 +2,23 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::path::{Path, PathBuf};
 
-use crate::engine::{self, Engines};
+use crate::engine;
 use crate::template::TemplateInfo;
 
 use normpath::PathExt;
 use rocket::http::ContentType;
+use tera::Tera;
 
 pub(crate) type Callback =
-    Box<dyn Fn(&mut Engines) -> Result<(), Box<dyn Error>> + Send + Sync + 'static>;
+    Box<dyn Fn(&mut Tera) -> Result<(), Box<dyn Error>> + Send + Sync + 'static>;
 
 pub(crate) struct Context {
     /// The root of the template directory.
     pub root: PathBuf,
     /// Mapping from template name to its information.
     pub templates: HashMap<String, TemplateInfo>,
-    /// Loaded template engines
-    pub engines: Engines,
+    /// The initialized templating engine.
+    pub tera: Tera,
 }
 
 pub(crate) use self::manager::ContextManager;
@@ -79,14 +80,14 @@ impl Context {
             );
         }
 
-        let mut engines = Engines::init(&templates)?;
-        if let Err(reason) = callback(&mut engines) {
+        let mut tera = engine::init(&templates)?;
+        if let Err(reason) = callback(&mut tera) {
             error_!("Template customization callback failed.");
             error_!("{}", reason);
             return None;
         }
 
-        for name in engines.templates() {
+        for name in tera.get_template_names() {
             if !templates.contains_key(name) {
                 let data_type = Path::new(name)
                     .extension()
@@ -105,7 +106,7 @@ impl Context {
         Some(Context {
             root,
             templates,
-            engines,
+            tera,
         })
     }
 }

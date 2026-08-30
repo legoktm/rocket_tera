@@ -8,9 +8,10 @@ use rocket::request::Request;
 use rocket::response::{self, Responder};
 use rocket::serde::Serialize;
 use rocket::{Ignite, Orbit, Rocket, Sentinel};
+use tera::Tera;
 
-use crate::Engines;
 use crate::context::{Context, ContextManager};
+use crate::engine;
 use crate::fairing::TemplateFairing;
 
 pub(crate) const DEFAULT_TEMPLATE_DIR: &str = "templates";
@@ -39,14 +40,14 @@ pub(crate) struct TemplateInfo {
 impl Template {
     /// Returns a fairing that initializes and maintains templating state.
     ///
-    /// This fairing, or the one returned by [`Template::custom()`], _must_ be
+    /// This fairing, or the one returned by [`Template::customize()`], _must_ be
     /// attached to any `Rocket` instance that wishes to render templates.
     /// Failure to attach this fairing will result in a "Uninitialized template
     /// context: missing fairing." error message when a template is attempted to
     /// be rendered.
     ///
-    /// If you wish to customize the internal templating engines, use
-    /// [`Template::custom()`] instead.
+    /// If you wish to customize the templating engine, use
+    /// [`Template::customize()`] instead.
     ///
     /// # Example
     ///
@@ -68,16 +69,22 @@ impl Template {
     /// }
     /// ```
     pub fn fairing() -> impl Fairing {
-        Template::custom(|_| {})
+        Template::customize(|_| {})
     }
 
     /// Returns a fairing that initializes and maintains templating state.
     ///
     /// Unlike [`Template::fairing()`], this method allows you to configure the
-    /// templating engine via the function `f`.
+    /// [`Tera`] instance via the function `f`.
     ///
     /// This method does not allow the function `f` to fail. If `f` is fallible,
-    /// use [`Template::try_custom()`] instead.
+    /// use [`Template::try_customize()`] instead.
+    ///
+    /// Calling methods on [`Tera`] may require importing types from the `tera`
+    /// crate. Import them from the reexport at [`rocket_tera::tera`] rather than
+    /// depending on `tera` directly, so that the versions cannot mismatch. For
+    /// instance, registering a filter requires [`tera::Value`] and
+    /// [`tera::Result`]:
     ///
     /// # Example
     ///
@@ -85,31 +92,44 @@ impl Template {
     /// extern crate rocket;
     /// extern crate rocket_tera;
     ///
+    /// use std::collections::HashMap;
+    ///
     /// use rocket_tera::Template;
+    /// use rocket_tera::tera::{self, Value};
+    ///
+    /// fn my_filter(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
+    ///     # /*
+    ///     ...
+    ///     # */ unimplemented!();
+    /// }
     ///
     /// fn main() {
     ///     rocket::build()
     ///         // ...
-    ///         .attach(Template::custom(|engines| {
-    ///             // engines.tera.register_filter ...
+    ///         .attach(Template::customize(|tera| {
+    ///             tera.register_filter("my_filter", my_filter);
     ///         }))
     ///         // ...
     ///     # ;
     /// }
     /// ```
-    pub fn custom<F: Send + Sync + 'static>(f: F) -> impl Fairing
+    ///
+    /// [`rocket_tera::tera`]: crate::tera
+    /// [`tera::Value`]: crate::tera::Value
+    /// [`tera::Result`]: crate::tera::Result
+    pub fn customize<F: Send + Sync + 'static>(f: F) -> impl Fairing
     where
-        F: Fn(&mut Engines),
+        F: Fn(&mut Tera),
     {
-        Self::try_custom(move |engines| {
-            f(engines);
+        Self::try_customize(move |tera| {
+            f(tera);
             Ok(())
         })
     }
 
     /// Returns a fairing that initializes and maintains templating state.
     ///
-    /// This variant of [`Template::custom()`] allows a fallible `f`. If `f`
+    /// This variant of [`Template::customize()`] allows a fallible `f`. If `f`
     /// returns an error during initialization, it will cancel the launch. If
     /// `f` returns an error during template reloading (in debug mode), then the
     /// newly-reloaded templates are discarded.
@@ -125,17 +145,17 @@ impl Template {
     /// fn main() {
     ///     rocket::build()
     ///         // ...
-    ///         .attach(Template::try_custom(|engines| {
-    ///             // engines.tera.register_filter ...
+    ///         .attach(Template::try_customize(|tera| {
+    ///             // tera.register_filter ...
     ///             Ok(())
     ///         }))
     ///         // ...
     ///     # ;
     /// }
     /// ```
-    pub fn try_custom<F: Send + Sync + 'static>(f: F) -> impl Fairing
+    pub fn try_customize<F: Send + Sync + 'static>(f: F) -> impl Fairing
     where
-        F: Fn(&mut Engines) -> Result<(), Box<dyn std::error::Error>>,
+        F: Fn(&mut Tera) -> Result<(), Box<dyn std::error::Error>>,
     {
         TemplateFairing {
             callback: Box::new(f),
@@ -264,7 +284,7 @@ impl Template {
             Status::InternalServerError
         })?;
 
-        let string = ctxt.engines.render(template, value).ok_or_else(|| {
+        let string = engine::render(&ctxt.tera, template, value).ok_or_else(|| {
             error_!("Template '{}' failed to render.", template);
             Status::InternalServerError
         })?;

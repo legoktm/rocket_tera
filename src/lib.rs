@@ -134,13 +134,13 @@
 //!
 //! ### Discovery, Automatic Reloads, and Engine Customization
 //!
-//! As long as one of [`Template::fairing()`], [`Template::custom()`], or
-//! [`Template::try_custom()`] is [attached], any file in the configured
+//! As long as one of [`Template::fairing()`], [`Template::customize()`], or
+//! [`Template::try_customize()`] is [attached], any file in the configured
 //! `template_dir` ending with the `.tera` extension (as described in the
 //! [usage section](#usage)) can be rendered. The latter two fairings allow
 //! customizations such as registering helpers and templates from strings.
 //!
-//! _**Note:** Templates that are registered directly via [`Template::custom()`],
+//! _**Note:** Templates that are registered directly via [`Template::customize()`],
 //! use whatever name provided during that registration; no extensions are
 //! automatically removed._
 //!
@@ -174,6 +174,5 @@ mod fairing;
 mod metadata;
 mod template;
 
-pub use engine::Engines;
 pub use metadata::Metadata;
 pub use template::Template;
