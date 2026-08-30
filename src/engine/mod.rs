@@ -5,9 +5,7 @@ use rocket::serde::Serialize;
 
 use crate::template::TemplateInfo;
 
-#[cfg(feature = "tera")]
 mod tera;
-#[cfg(feature = "tera")]
 use ::tera::Tera;
 
 pub(crate) trait Engine: Send + Sync + Sized + 'static {
@@ -27,7 +25,6 @@ pub(crate) trait Engine: Send + Sync + Sized + 'static {
 /// `rocket_dyn_templates::tera`. The example below illustrates this:
 ///
 /// ```rust
-/// # #[cfg(feature = "tera")] {
 /// use std::collections::HashMap;
 ///
 /// use rocket_dyn_templates::{Template, Engines};
@@ -48,7 +45,6 @@ pub(crate) trait Engine: Send + Sync + Sized + 'static {
 ///         // ...
 ///         # ;
 /// }
-/// # }
 /// ```
 ///
 /// [`tera::Value`]: crate::tera::Value
@@ -56,16 +52,14 @@ pub(crate) trait Engine: Send + Sync + Sized + 'static {
 pub struct Engines {
     /// A `Tera` templating engine.
     ///
-    /// This field is only available when the `tera` feature is enabled. When
-    /// calling methods on the `Tera` instance, ensure you use types imported
-    /// from `rocket_dyn_templates::tera` to avoid version mismatches.
-    #[cfg(feature = "tera")]
+    /// When calling methods on the `Tera` instance, ensure you use types
+    /// imported from `rocket_dyn_templates::tera` to avoid version mismatches.
     pub tera: Tera,
 }
 
 impl Engines {
     pub(crate) const ENABLED_EXTENSIONS: &'static [&'static str] = &[
-        #[cfg(feature = "tera")] Tera::EXT,
+        Tera::EXT,
     ];
 
     pub(crate) fn init(templates: &HashMap<String, TemplateInfo>) -> Option<Engines> {
@@ -79,7 +73,6 @@ impl Engines {
         }
 
         Some(Engines {
-            #[cfg(feature = "tera")]
             tera: inner::<Tera>(templates)?,
         })
     }
@@ -90,10 +83,8 @@ impl Engines {
         info: &TemplateInfo,
         context: C,
     ) -> Option<String> {
-        #[cfg(feature = "tera")] {
-            if info.engine_ext == Tera::EXT {
-                return Engine::render(&self.tera, name, context);
-            }
+        if info.engine_ext == Tera::EXT {
+            return Engine::render(&self.tera, name, context);
         }
 
         None
@@ -101,11 +92,6 @@ impl Engines {
 
     /// Returns iterator over template (name, engine_extension).
     pub(crate) fn templates(&self) -> impl Iterator<Item = (&str, &'static str)> {
-        #[cfg(feature = "tera")]
-        let tera = self.tera.get_template_names().map(|name| (name, Tera::EXT));
-
-        #[cfg(not(feature = "tera"))] let tera = std::iter::empty();
-
-        tera
+        self.tera.get_template_names().map(|name| (name, Tera::EXT))
     }
 }

@@ -7,12 +7,11 @@
 //!
 //! # Usage
 //!
-//!   1. Depend on `rocket_dyn_templates`, enabling the `tera` feature:
+//!   1. Depend on `rocket_dyn_templates`:
 //!
 //!      ```toml
-//!      [dependencies.rocket_dyn_templates]
-//!      version = "0.1.0"
-//!      features = ["tera"]
+//!      [dependencies]
+//!      rocket_dyn_templates = "0.1.0"
 //!      ```
 //!
 //!   2. Write your templates inside of the [configurable]
@@ -176,7 +175,6 @@
 #[macro_use] extern crate rocket;
 
 #[doc(inline)]
-#[cfg(feature = "tera")]
 /// The tera templating engine library, reexported.
 pub use tera;
 

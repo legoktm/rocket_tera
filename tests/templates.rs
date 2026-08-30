@@ -204,7 +204,6 @@ fn test_context_macro() {
     }
 }
 
-#[cfg(feature = "tera")]
 mod tera_tests {
     use super::*;
     use std::collections::HashMap;
