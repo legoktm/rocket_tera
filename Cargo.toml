@@ -12,8 +12,20 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 rust-version = "1.75"
 
-[lints]
-workspace = true
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(nightly)'] }
+rust_2018_idioms = "warn"
+async_fn_in_trait = "allow"
+refining_impl_trait = "allow"
+# unreachable_pub = "warn"
+# single_use_lifetimes = "warn"
+# missing_docs = "warn"
+
+[lints.clippy]
+type_complexity = "allow"
+module_inception = "allow"
+multiple_bound_locations = "allow"
+manual_range_contains = "allow"
 
 [features]
 tera = ["dep:tera"]
@@ -35,7 +47,7 @@ features = ["loader", "speedups", "json", "urlencode"]
 
 [dependencies.rocket]
 version = "0.6.0-dev"
-path = "../../core/lib"
+git = "https://github.com/rwf2/Rocket"
 default-features = false
 
 [dev-dependencies]
