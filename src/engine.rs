@@ -1,8 +1,8 @@
-use std::error::Error;
 use std::collections::HashMap;
+use std::error::Error;
 
-use tera::{Context, Tera};
 use rocket::serde::Serialize;
+use tera::{Context, Tera};
 
 use crate::template::TemplateInfo;
 
@@ -55,12 +55,20 @@ impl Engines {
     pub(crate) fn init(templates: &HashMap<String, TemplateInfo>) -> Option<Engines> {
         // Create the Tera instance.
         let mut tera = Tera::default();
-        let ext = [".html.tera", ".htm.tera", ".xml.tera", ".html", ".htm", ".xml"];
+        let ext = [
+            ".html.tera",
+            ".htm.tera",
+            ".xml.tera",
+            ".html",
+            ".htm",
+            ".xml",
+        ];
         tera.autoescape_on(ext.to_vec());
 
         // Collect into a tuple of (path, name) for Tera. If we register one at
         // a time, it will complain about unregistered base templates.
-        let files = templates.iter()
+        let files = templates
+            .iter()
             .filter_map(|(name, info)| Some((info.path.as_ref()?, Some(name.as_str()))));
 
         // Finally try to tell Tera about all of the templates.

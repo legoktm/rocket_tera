@@ -168,7 +168,8 @@
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 #[doc(inline)]
 /// The tera templating engine library, reexported.
@@ -177,9 +178,9 @@ pub use tera;
 #[doc(hidden)]
 pub use rocket::serde;
 
+mod context;
 mod engine;
 mod fairing;
-mod context;
 mod metadata;
 mod template;
 

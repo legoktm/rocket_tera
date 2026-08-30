@@ -1,18 +1,18 @@
 use std::borrow::Cow;
 use std::path::PathBuf;
 
-use rocket::{Rocket, Orbit, Ignite, Sentinel};
-use rocket::request::Request;
 use rocket::fairing::Fairing;
-use rocket::response::{self, Responder};
+use rocket::figment::{error::Error, value::Value};
 use rocket::http::{ContentType, Status};
-use rocket::figment::{value::Value, error::Error};
-use rocket::trace::Trace;
+use rocket::request::Request;
+use rocket::response::{self, Responder};
 use rocket::serde::Serialize;
+use rocket::trace::Trace;
+use rocket::{Ignite, Orbit, Rocket, Sentinel};
 
-use crate::Engines;
-use crate::fairing::TemplateFairing;
 use crate::context::{Context, ContextManager};
+use crate::fairing::TemplateFairing;
+use crate::Engines;
 
 pub(crate) const DEFAULT_TEMPLATE_DIR: &str = "templates";
 
@@ -34,7 +34,7 @@ pub(crate) struct TemplateInfo {
     /// The complete path, including `template_dir`, to this template, if any.
     pub(crate) path: Option<PathBuf>,
     /// The extension before the template extension in the template, if any.
-    pub(crate) data_type: ContentType
+    pub(crate) data_type: ContentType,
 }
 
 impl Template {
@@ -99,9 +99,13 @@ impl Template {
     /// }
     /// ```
     pub fn custom<F: Send + Sync + 'static>(f: F) -> impl Fairing
-        where F: Fn(&mut Engines)
+    where
+        F: Fn(&mut Engines),
     {
-        Self::try_custom(move |engines| { f(engines); Ok(()) })
+        Self::try_custom(move |engines| {
+            f(engines);
+            Ok(())
+        })
     }
 
     /// Returns a fairing that initializes and maintains templating state.
@@ -131,9 +135,12 @@ impl Template {
     /// }
     /// ```
     pub fn try_custom<F: Send + Sync + 'static>(f: F) -> impl Fairing
-        where F: Fn(&mut Engines) -> Result<(), Box<dyn std::error::Error>>
+    where
+        F: Fn(&mut Engines) -> Result<(), Box<dyn std::error::Error>>,
     {
-        TemplateFairing { callback: Box::new(f) }
+        TemplateFairing {
+            callback: Box::new(f),
+        }
     }
 
     /// Render the template named `name` with the context `context`. The
@@ -170,7 +177,9 @@ impl Template {
     /// ```
     #[inline]
     pub fn render<S, C>(name: S, context: C) -> Template
-        where S: Into<Cow<'static, str>>, C: Serialize
+    where
+        S: Into<Cow<'static, str>>,
+        C: Serialize,
     {
         Template {
             name: name.into(),
@@ -213,19 +222,27 @@ impl Template {
     /// ```
     #[inline]
     pub fn show<S, C>(rocket: &Rocket<Orbit>, name: S, context: C) -> Option<String>
-        where S: Into<Cow<'static, str>>, C: Serialize
+    where
+        S: Into<Cow<'static, str>>,
+        C: Serialize,
     {
-        let ctxt = rocket.state::<ContextManager>()
+        let ctxt = rocket
+            .state::<ContextManager>()
             .map(ContextManager::context)
             .or_else(|| {
-                error!("Uninitialized template context: missing fairing.\n\
+                error!(
+                    "Uninitialized template context: missing fairing.\n\
                     To use templates, you must attach `Template::fairing()`.\n\
-                    See the `Template` documentation for more information.");
+                    See the `Template` documentation for more information."
+                );
 
                 None
             })?;
 
-        Template::render(name, context).finalize(&ctxt).ok().map(|v| v.1)
+        Template::render(name, context)
+            .finalize(&ctxt)
+            .ok()
+            .map(|v| v.1)
     }
 
     /// Actually render this template given a template context. This method is
@@ -263,16 +280,14 @@ impl Template {
 /// rendering fails, an `Err` of `Status::InternalServerError` is returned.
 impl<'r> Responder<'r, 'static> for Template {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
-        let ctxt = req.rocket()
-            .state::<ContextManager>()
-            .ok_or_else(|| {
-                error!(
-                    "uninitialized template context: missing `Template::fairing()`.\n\
+        let ctxt = req.rocket().state::<ContextManager>().ok_or_else(|| {
+            error!(
+                "uninitialized template context: missing `Template::fairing()`.\n\
                     To use templates, you must attach `Template::fairing()`."
-                );
+            );
 
-                Status::InternalServerError
-            })?;
+            Status::InternalServerError
+        })?;
 
         self.finalize(&ctxt.context())?.respond_to(req)
     }
