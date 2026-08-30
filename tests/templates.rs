@@ -51,6 +51,38 @@ fn test_callback_error() {
     }
 }
 
+#[get("/")]
+fn sentinel_return_template() -> Template {
+    Template::render("foo", ())
+}
+
+#[get("/")]
+fn sentinel_return_opt_template() -> Option<Template> {
+    Some(Template::render("foo", ()))
+}
+
+#[derive(rocket::Responder)]
+struct SentinelMyThing<T>(T);
+
+#[get("/")]
+fn sentinel_return_custom_template() -> SentinelMyThing<Template> {
+    SentinelMyThing(Template::render("foo", ()))
+}
+
+#[derive(rocket::Responder)]
+struct SentinelMyOkayThing<T>(Option<T>);
+
+impl<T> rocket::Sentinel for SentinelMyOkayThing<T> {
+    fn abort(_: &Rocket<rocket::Ignite>) -> bool {
+        false
+    }
+}
+
+#[get("/")]
+fn always_ok_sentinel() -> SentinelMyOkayThing<Template> {
+    SentinelMyOkayThing(None)
+}
+
 #[test]
 fn test_sentinel() {
     use rocket::{error::ErrorKind::SentinelAborts, local::blocking::Client};
@@ -61,46 +93,14 @@ fn test_sentinel() {
     let err = Client::debug_with(routes![is_reloading, template_check]).unwrap_err();
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 2));
 
-    #[get("/")]
-    fn return_template() -> Template {
-        Template::render("foo", ())
-    }
-
-    let err = Client::debug_with(routes![return_template]).unwrap_err();
+    let err = Client::debug_with(routes![sentinel_return_template]).unwrap_err();
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
 
-    #[get("/")]
-    fn return_opt_template() -> Option<Template> {
-        Some(Template::render("foo", ()))
-    }
-
-    let err = Client::debug_with(routes![return_opt_template]).unwrap_err();
+    let err = Client::debug_with(routes![sentinel_return_opt_template]).unwrap_err();
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
 
-    #[derive(rocket::Responder)]
-    struct MyThing<T>(T);
-
-    #[get("/")]
-    fn return_custom_template() -> MyThing<Template> {
-        MyThing(Template::render("foo", ()))
-    }
-
-    let err = Client::debug_with(routes![return_custom_template]).unwrap_err();
+    let err = Client::debug_with(routes![sentinel_return_custom_template]).unwrap_err();
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
-
-    #[derive(rocket::Responder)]
-    struct MyOkayThing<T>(Option<T>);
-
-    impl<T> rocket::Sentinel for MyOkayThing<T> {
-        fn abort(_: &Rocket<rocket::Ignite>) -> bool {
-            false
-        }
-    }
-
-    #[get("/")]
-    fn always_ok_sentinel() -> MyOkayThing<Template> {
-        MyOkayThing(None)
-    }
 
     Client::debug_with(routes![always_ok_sentinel]).expect("no sentinel abort");
 }
