@@ -49,9 +49,6 @@ jobs:
           persist-credentials: false
 
       - name: Install toolchain
-        # `rustdoc::all` is denied via `[lints.rustdoc]` in Cargo.toml. Nightly
-        # is used because that group contains lints that do not exist on stable,
-        # notably `bare_urls` and `unescaped_backticks`.
         run: rustup toolchain install nightly --profile minimal --no-self-update
 
       - name: rustdoc
