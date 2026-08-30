@@ -3,7 +3,6 @@ use rocket::figment::{Source, value::magic::RelativePathBuf};
 use rocket::{Build, Orbit, Rocket};
 
 use crate::context::{Callback, Context, ContextManager};
-use crate::engine;
 use crate::template::DEFAULT_TEMPLATE_DIR;
 
 /// The TemplateFairing initializes the template system on attach, running
@@ -67,7 +66,6 @@ impl Fairing for TemplateFairing {
 
         info!("{}{}:", "📐 ".emoji(), "Templating".magenta());
         info_!("directory: {}", Source::from(&*cm.context().root).primary());
-        info_!("engine: {}", engine::EXT.primary());
     }
 
     #[cfg(debug_assertions)]

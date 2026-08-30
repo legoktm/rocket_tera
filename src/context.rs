@@ -28,12 +28,6 @@ impl Context {
     /// template engine, and store all of the initialized state in a `Context`
     /// structure, which is returned if all goes well.
     pub fn initialize(root: &Path, callback: &Callback) -> Option<Context> {
-        fn is_file_with_ext(entry: &walkdir::DirEntry, ext: &str) -> bool {
-            let is_file = entry.file_type().is_file();
-            let has_ext = entry.path().extension().is_some_and(|e| e == ext);
-            is_file && has_ext
-        }
-
         let root = match root.normalize() {
             Ok(root) => root.into_path_buf(),
             Err(e) => {
@@ -45,7 +39,7 @@ impl Context {
         let mut templates: HashMap<String, TemplateInfo> = HashMap::new();
         for entry in walkdir::WalkDir::new(&root).follow_links(true) {
             let entry = match entry {
-                Ok(entry) if is_file_with_ext(&entry, engine::EXT) => entry,
+                Ok(entry) if entry.file_type().is_file() => entry,
                 Ok(_) | Err(_) => continue,
             };
 
@@ -220,28 +214,12 @@ mod manager {
     }
 }
 
-/// Removes the file path's extension or does nothing if there is none.
-fn remove_extension(path: &Path) -> PathBuf {
-    let stem = match path.file_stem() {
-        Some(stem) => stem,
-        None => return path.to_path_buf(),
-    };
-
-    match path.parent() {
-        Some(parent) => parent.join(stem),
-        None => PathBuf::from(stem),
-    }
-}
-
 /// Splits a path into a name that may be used to identify the template, and the
 /// template's data type, if any.
 fn split_path(root: &Path, path: &Path) -> (String, Option<String>) {
     let rel_path = path.strip_prefix(root).unwrap().to_path_buf();
-    let path_no_ext = remove_extension(&rel_path);
-    let data_type = path_no_ext.extension();
-    let mut name = remove_extension(&path_no_ext)
-        .to_string_lossy()
-        .into_owned();
+    let data_type = rel_path.extension();
+    let mut name = rel_path.to_string_lossy().into_owned();
 
     // Ensure template name consistency on Windows systems
     if cfg!(windows) {
@@ -258,10 +236,10 @@ mod tests {
     #[test]
     fn template_path_index_html() {
         for root in &["/", "/a/b/c/", "/a/b/c/d/", "/a/"] {
-            let path = Path::new(root).join("index.html.tera");
+            let path = Path::new(root).join("index.html");
             let (name, data_type) = split_path(Path::new(root), &path);
 
-            assert_eq!(name, "index");
+            assert_eq!(name, "index.html");
             assert_eq!(data_type, Some("html".into()));
         }
     }
@@ -270,30 +248,13 @@ mod tests {
     fn template_path_subdir_index_html() {
         for root in &["/", "/a/b/c/", "/a/b/c/d/", "/a/"] {
             for sub in &["a/", "a/b/", "a/b/c/", "a/b/c/d/"] {
-                let path = Path::new(root).join(sub).join("index.html.tera");
+                let path = Path::new(root).join(sub).join("index.html");
                 let (name, data_type) = split_path(Path::new(root), &path);
 
-                let expected_name = format!("{sub}index");
+                let expected_name = format!("{sub}index.html");
                 assert_eq!(name, expected_name.as_str());
                 assert_eq!(data_type, Some("html".into()));
             }
         }
-    }
-
-    #[test]
-    fn template_path_doc_examples() {
-        fn name_for(path: &str) -> String {
-            split_path(Path::new("templates/"), &Path::new("templates/").join(path)).0
-        }
-
-        assert_eq!(name_for("index.html.tera"), "index");
-        assert_eq!(name_for("index.tera"), "index");
-        assert_eq!(name_for("dir/index.tera"), "dir/index");
-        assert_eq!(name_for("dir/index.html.tera"), "dir/index");
-        assert_eq!(name_for("index.template.html.tera"), "index.template");
-        assert_eq!(
-            name_for("subdir/index.template.html.tera"),
-            "subdir/index.template"
-        );
     }
 }

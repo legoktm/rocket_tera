@@ -230,8 +230,8 @@ mod tera_tests {
         map.insert("content", "<script />");
 
         // Test with a txt file, which shouldn't escape.
-        let template = Template::show(client.rocket(), "tera/txt_test", &map);
-        let md_rendered = metadata.render("tera/txt_test", &map);
+        let template = Template::show(client.rocket(), "tera/txt_test.txt", &map);
+        let md_rendered = metadata.render("tera/txt_test.txt", &map);
         assert_eq!(template, Some(UNESCAPED_EXPECTED.into()));
         assert_eq!(
             md_rendered,
@@ -239,8 +239,8 @@ mod tera_tests {
         );
 
         // Now with an HTML file, which should escape.
-        let template = Template::show(client.rocket(), "tera/html_test", &map);
-        let md_rendered = metadata.render("tera/html_test", &map);
+        let template = Template::show(client.rocket(), "tera/html_test.html", &map);
+        let md_rendered = metadata.render("tera/html_test.html", &map);
         assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
         assert_eq!(
             md_rendered,
@@ -255,7 +255,7 @@ mod tera_tests {
         let client = Client::debug(rocket()).await.unwrap();
         let req = client.get("/");
         let metadata = Metadata::from_request(&req).await.unwrap();
-        assert!(metadata.contains_template("tera/[test]/html_test"));
+        assert!(metadata.contains_template("tera/[test]/html_test.html"));
     }
 
     // u128 is not supported. enable when it is.
@@ -269,7 +269,7 @@ mod tera_tests {
     //     map.insert("title", 123);
     //     map.insert("number", 1u128 << 80);
     //
-    //     let template = Template::show(client.rocket(), "tera/txt_test", &map);
+    //     let template = Template::show(client.rocket(), "tera/txt_test.txt", &map);
     //     assert_eq!(template, Some(EXPECTED.into()));
     // }
 
@@ -279,10 +279,10 @@ mod tera_tests {
 
         let client = Client::debug(rocket()).unwrap();
 
-        let response = client.get("/tera/txt_test").dispatch();
+        let response = client.get("/tera/txt_test.txt").dispatch();
         assert_eq!(response.status(), Status::Ok);
 
-        let response = client.get("/tera/html_test").dispatch();
+        let response = client.get("/tera/html_test.html").dispatch();
         assert_eq!(response.status(), Status::Ok);
 
         let response = client.get("/tera/not_existing").dispatch();
@@ -298,7 +298,7 @@ mod tera_tests {
 
         use rocket::local::blocking::Client;
 
-        const RELOAD_TEMPLATE: &str = "tera/reload";
+        const RELOAD_TEMPLATE: &str = "tera/reload.txt";
         const INITIAL_TEXT: &str = "initial";
         const NEW_TEXT: &str = "reload";
 
@@ -310,7 +310,7 @@ mod tera_tests {
 
         // set up the template before initializing the Rocket instance so
         // that it will be picked up in the initial loading of templates.
-        let reload_path = template_root().join("tera").join("reload.txt.tera");
+        let reload_path = template_root().join("tera").join("reload.txt");
         write_file(&reload_path, INITIAL_TEXT);
 
         // set up the client. if we can't reload templates, then just quit

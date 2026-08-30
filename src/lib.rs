@@ -9,16 +9,17 @@
 //!   1. Depend on the crate: `cargo add rocket_tera`
 //!
 //!   2. Write your templates inside of the [configurable]
-//!      `${ROCKET_ROOT}/templates`. The filename _must_ end with an extension
-//!      of `.tera`, and the second-to-last extension should correspond to the
-//!      file's type, as in `${ROCKET_ROOT}/templates/index.html.tera`.
+//!      `${ROCKET_ROOT}/templates`. Every file in that directory is a template;
+//!      no particular extension is required, but the extension determines the
+//!      response's `Content-Type`, as in
+//!      `${ROCKET_ROOT}/templates/index.html`.
 //!
 //!      [configurable]: #configuration
 //!      [Tera]: https://docs.rs/crate/tera/1
 //!
 //!   3. Attach `Template::fairing()` and return a [`Template`] from your routes
-//!      via [`Template::render()`], supplying the name of the template file
-//!      **minus the last two extensions**:
+//!      via [`Template::render()`], supplying the path of the template file
+//!      **relative to the template directory**:
 //!
 //!      ```rust
 //!      # #[macro_use] extern crate rocket;
@@ -26,7 +27,7 @@
 //!
 //!      #[get("/")]
 //!      fn index() -> Template {
-//!          Template::render("index", context! { field: "value" })
+//!          Template::render("index.html", context! { field: "value" })
 //!      }
 //!
 //!      #[launch]
@@ -69,26 +70,25 @@
 //!
 //! Templates are rendered by _name_ via [`Template::render()`], which returns a
 //! [`Template`] responder. The _name_ of the template is the path to the
-//! template file, relative to `template_dir`, minus at most two extensions.
+//! template file, relative to `template_dir`, extension included.
 //!
 //! The `Content-Type` of the response is automatically determined by the
-//! non-engine extension using [`ContentType::from_extension()`]. If there is no
-//! such extension or it is unknown, `text/plain` is used.
+//! extension using [`ContentType::from_extension()`]. If there is no extension
+//! or it is unknown, `text/plain` is used.
 //!
 //! The following table contains examples:
 //!
-//! | template path                                 | [`Template::render()`] call       | content-type |
-//! |-----------------------------------------------|-----------------------------------|--------------|
-//! | {template_dir}/index.html.tera                 | `render("index")`                 | HTML         |
-//! | {template_dir}/index.tera                      | `render("index")`                 | `text/plain` |
-//! | {template_dir}/dir/index.tera                  | `render("dir/index")`             | `text/plain` |
-//! | {template_dir}/dir/data.json.tera              | `render("dir/data")`              | JSON         |
-//! | {template_dir}/data.template.xml.tera          | `render("data.template")`         | XML          |
-//! | {template_dir}/subdir/index.template.html.tera | `render("subdir/index.template")` | HTML         |
+//! | template path                             | [`Template::render()`] call            | content-type |
+//! |-------------------------------------------|----------------------------------------|--------------|
+//! | {template_dir}/index.html                 | `render("index.html")`                 | HTML         |
+//! | {template_dir}/index                      | `render("index")`                      | `text/plain` |
+//! | {template_dir}/dir/index                  | `render("dir/index")`                  | `text/plain` |
+//! | {template_dir}/dir/data.json              | `render("dir/data.json")`              | JSON         |
+//! | {template_dir}/data.template.xml          | `render("data.template.xml")`          | XML          |
+//! | {template_dir}/subdir/index.template.html | `render("subdir/index.template.html")` | HTML         |
 //!
-//! The recommended naming scheme is to use two extensions: one for the file
-//! type, and one for the template extension. This means that template
-//! extensions should look like: `.html.tera`, `.xml.tera`, and so on.
+//! Give every template the extension of the file type it renders to, so that
+//! the `Content-Type` is correct: `.html`, `.xml`, and so on.
 //!
 //! [`ContentType::from_extension()`]: ../rocket/http/struct.ContentType.html#method.from_extension
 //!
@@ -109,7 +109,7 @@
 //! #[get("/")]
 //! fn index() -> Template {
 //!     // Using the `context! { }` macro.
-//!     Template::render("index", context! {
+//!     Template::render("index.html", context! {
 //!         site_name: "Rocket - Home Page",
 //!         version: 127,
 //!     })
@@ -125,7 +125,7 @@
 //!     }
 //!
 //!     // Using an existing `IndexContext`, which implements `Serialize`.
-//!     Template::render("index", IndexContext {
+//!     Template::render("index.html", IndexContext {
 //!         site_name: "Rocket - Home Page",
 //!         version: 127,
 //!     })
@@ -135,14 +135,13 @@
 //! ### Discovery, Automatic Reloads, and Engine Customization
 //!
 //! As long as one of [`Template::fairing()`], [`Template::customize()`], or
-//! [`Template::try_customize()`] is [attached], any file in the configured
-//! `template_dir` ending with the `.tera` extension (as described in the
-//! [usage section](#usage)) can be rendered. The latter two fairings allow
-//! customizations such as registering helpers and templates from strings.
+//! [`Template::try_customize()`] is [attached], every file in the configured
+//! `template_dir` is registered with Tera and can be rendered. Files that are
+//! not valid Tera templates will abort the launch, so keep non-template assets
+//! out of `template_dir`.
 //!
-//! _**Note:** Templates that are registered directly via [`Template::customize()`],
-//! use whatever name provided during that registration; no extensions are
-//! automatically removed._
+//! _**Note:** Templates that are registered directly via [`Template::customize()`]
+//! use whatever name was provided during that registration._
 //!
 //! In debug mode (without the `--release` flag passed to `cargo`), templates
 //! are **automatically reloaded** from disk when changes are made. In release

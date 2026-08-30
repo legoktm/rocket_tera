@@ -20,7 +20,7 @@ fn index() -> Redirect {
 #[get("/hello/<name>")]
 fn hello(name: &str) -> Template {
     Template::render(
-        "index",
+        "index.html",
         context! {
             title: "Hello",
             name: Some(name),
@@ -36,7 +36,7 @@ fn about() -> Template {
 
 #[catch(404)]
 fn not_found(req: &Request<'_>) -> Template {
-    Template::render("error/404", context! { uri: req.uri() })
+    Template::render("error/404.html", context! { uri: req.uri() })
 }
 
 /// Templates need not come from disk: this one is registered at startup, and is
@@ -45,7 +45,7 @@ fn customize(tera: &mut Tera) {
     tera.add_raw_template(
         "about.html",
         r#"
-        {% extends "base" %}
+        {% extends "base.html" %}
 
         {% block content %}
             <section id="about">

@@ -33,7 +33,7 @@ pub struct Template {
 pub(crate) struct TemplateInfo {
     /// The complete path, including `template_dir`, to this template, if any.
     pub(crate) path: Option<PathBuf>,
-    /// The extension before the template extension in the template, if any.
+    /// The Content-Type derived from the template's extension, if any.
     pub(crate) data_type: ContentType,
 }
 
@@ -177,7 +177,7 @@ impl Template {
     /// ```rust
     /// use rocket_tera::{Template, context};
     ///
-    /// let template = Template::render("index", context! {
+    /// let template = Template::render("index.html", context! {
     ///     foo: "Hello, world!",
     /// });
     /// ```
@@ -192,7 +192,7 @@ impl Template {
     /// let mut context = HashMap::new();
     /// context.insert("foo", "Hello, world!");
     ///
-    /// let template = Template::render("index", context);
+    /// let template = Template::render("index.html", context);
     /// ```
     #[inline]
     pub fn render<S, C>(name: S, context: C) -> Template
@@ -236,7 +236,7 @@ impl Template {
     ///     // Create a `context`. Here, just an empty `HashMap`.
     ///     let mut context = HashMap::new();
     ///     # context.insert("test", "test");
-    ///     let template = Template::show(client.rocket(), "index", context);
+    ///     let template = Template::show(client.rocket(), "index.html", context);
     /// }
     /// ```
     #[inline]
@@ -342,7 +342,7 @@ impl Sentinel for Template {
 /// # use rocket_tera::{Template, context};
 /// #[get("/<foo>")]
 /// fn render_index(foo: u64) -> Template {
-///     Template::render("index", context! {
+///     Template::render("index.html", context! {
 ///         // Note that shorthand field syntax is supported.
 ///         // This is equivalent to `foo: foo,`
 ///         foo,
@@ -367,7 +367,7 @@ impl Sentinel for Template {
 ///
 /// #[get("/<foo>")]
 /// fn render_index(foo: u64) -> Template {
-///     Template::render("index", IndexContext {
+///     Template::render("index.html", IndexContext {
 ///         foo,
 ///         bar: "Hello world",
 ///     })

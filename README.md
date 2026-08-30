@@ -13,15 +13,15 @@ and automatically reloads templates when compiled in debug mode.
      `{rocket_root}/templates`).
 
   2. Attach `Template::fairing()` and return a `Template` using
-     `Template::render()`, supplying the name of the template file **minus the
-     last two extensions**:
+     `Template::render()`, supplying the path of the template file **relative to
+     `template_dir`**:
 
      ```rust
      use rocket_tera::{Template, context};
 
      #[get("/")]
      fn index() -> Template {
-         Template::render("template-name", context! { field: "value" })
+         Template::render("index.html", context! { field: "value" })
      }
 
      #[launch]

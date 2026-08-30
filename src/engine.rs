@@ -6,21 +6,10 @@ use tera::{Context, Tera};
 
 use crate::template::TemplateInfo;
 
-/// The file extension identifying a template.
-pub(crate) const EXT: &str = "tera";
-
 /// Builds a `Tera` instance with every discovered template registered.
 pub(crate) fn init(templates: &HashMap<String, TemplateInfo>) -> Option<Tera> {
     let mut tera = Tera::default();
-    let ext = [
-        ".html.tera",
-        ".htm.tera",
-        ".xml.tera",
-        ".html",
-        ".htm",
-        ".xml",
-    ];
-    tera.autoescape_on(ext.to_vec());
+    tera.autoescape_on(vec![".html", ".htm", ".xml"]);
 
     // Collect into a tuple of (path, name) for Tera. If we register one at
     // a time, it will complain about unregistered base templates.

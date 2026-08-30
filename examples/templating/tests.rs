@@ -22,7 +22,7 @@ fn test_root_other_methods_are_caught() {
     let client = Client::tracked(rocket()).unwrap();
     for method in &[Post, Put, Delete, Options, Trace, Connect, Patch] {
         let context = context! { uri: "/" };
-        let expected = Template::show(client.rocket(), "error/404", &context);
+        let expected = Template::show(client.rocket(), "error/404.html", &context);
 
         let response = client.req(*method, "/").dispatch();
         assert_eq!(response.status(), Status::NotFound);
