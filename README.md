@@ -32,6 +32,10 @@ and automatically reloads templates when compiled in debug mode.
 
 See the [crate docs](https://docs.rs/rocket_tera) for full details.
 
+# Security
+
+This crate is intended to be used with trusted templates that are shipped alongside your Rocket application. Using untrusted or user-provided templates is out of scope of this crate's threat model.
+
 # History
 
 This was originally forked from the `rocket_dyn_templates` crate, which was maintained as part of Rocket upstream.
