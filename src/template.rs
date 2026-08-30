@@ -33,9 +33,7 @@ pub struct Template {
 pub(crate) struct TemplateInfo {
     /// The complete path, including `template_dir`, to this template, if any.
     pub(crate) path: Option<PathBuf>,
-    /// The extension for the engine of this template.
-    pub(crate) engine_ext: &'static str,
-    /// The extension before the engine extension in the template, if any.
+    /// The extension before the template extension in the template, if any.
     pub(crate) data_type: ContentType
 }
 
@@ -76,9 +74,8 @@ impl Template {
 
     /// Returns a fairing that initializes and maintains templating state.
     ///
-    /// Unlike [`Template::fairing()`], this method allows you to configure
-    /// templating engines via the function `f`. Note that only the enabled
-    /// templating engines will be accessible from the `Engines` type.
+    /// Unlike [`Template::fairing()`], this method allows you to configure the
+    /// templating engine via the function `f`.
     ///
     /// This method does not allow the function `f` to fail. If `f` is fallible,
     /// use [`Template::try_custom()`] instead.
@@ -252,7 +249,7 @@ impl Template {
             Status::InternalServerError
         })?;
 
-        let string = ctxt.engines.render(template, info, value).ok_or_else(|| {
+        let string = ctxt.engines.render(template, value).ok_or_else(|| {
             error!(template, "template failed to render");
             Status::InternalServerError
         })?;

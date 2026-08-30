@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::error::Error;
 
-use crate::engine::Engines;
+use crate::engine::{self, Engines};
 use crate::template::TemplateInfo;
 
 use rocket::http::ContentType;
@@ -42,37 +42,34 @@ impl Context {
         };
 
         let mut templates: HashMap<String, TemplateInfo> = HashMap::new();
-        for &ext in Engines::ENABLED_EXTENSIONS {
-            for entry in walkdir::WalkDir::new(&root).follow_links(true) {
-                let entry = match entry {
-                    Ok(entry) if is_file_with_ext(&entry, ext) => entry,
-                    Ok(_) | Err(_) => continue,
-                };
+        for entry in walkdir::WalkDir::new(&root).follow_links(true) {
+            let entry = match entry {
+                Ok(entry) if is_file_with_ext(&entry, engine::EXT) => entry,
+                Ok(_) | Err(_) => continue,
+            };
 
-                let (template, data_type_str) = split_path(&root, entry.path());
-                if let Some(info) = templates.get(&*template) {
-                    warn!(
-                        %template,
-                        first_path = %entry.path().display(),
-                        second_path = info.path.as_ref().map(|p| display(p.display())),
-                        data_type = %info.data_type,
-                        "Template name '{template}' can refer to multiple templates.\n\
-                         First path will be used. Second path is ignored."
-                    );
+            let (template, data_type_str) = split_path(&root, entry.path());
+            if let Some(info) = templates.get(&*template) {
+                warn!(
+                    %template,
+                    first_path = %entry.path().display(),
+                    second_path = info.path.as_ref().map(|p| display(p.display())),
+                    data_type = %info.data_type,
+                    "Template name '{template}' can refer to multiple templates.\n\
+                     First path will be used. Second path is ignored."
+                );
 
-                    continue;
-                }
-
-                let data_type = data_type_str.as_ref()
-                    .and_then(|ext| ContentType::from_extension(ext))
-                    .unwrap_or(ContentType::Text);
-
-                templates.insert(template, TemplateInfo {
-                    path: Some(entry.into_path()),
-                    engine_ext: ext,
-                    data_type,
-                });
+                continue;
             }
+
+            let data_type = data_type_str.as_ref()
+                .and_then(|ext| ContentType::from_extension(ext))
+                .unwrap_or(ContentType::Text);
+
+            templates.insert(template, TemplateInfo {
+                path: Some(entry.into_path()),
+                data_type,
+            });
         }
 
         let mut engines = Engines::init(&templates)?;
@@ -81,14 +78,14 @@ impl Context {
             return None;
         }
 
-        for (name, engine_ext) in engines.templates() {
+        for name in engines.templates() {
             if !templates.contains_key(name) {
                 let data_type = Path::new(name).extension()
                     .and_then(|osstr| osstr.to_str())
                     .and_then(ContentType::from_extension)
                     .unwrap_or(ContentType::Text);
 
-                let info = TemplateInfo { path: None, engine_ext, data_type };
+                let info = TemplateInfo { path: None, data_type };
                 templates.insert(name.to_string(), info);
             }
         }

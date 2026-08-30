@@ -1,4 +1,4 @@
-//! Dynamic templating engine support for Rocket.
+//! Tera templating support for Rocket.
 //!
 //! This crate adds support for dynamic template rendering to Rocket. It
 //! automatically discovers templates, provides a `Responder` to render
@@ -16,12 +16,8 @@
 //!
 //!   2. Write your templates inside of the [configurable]
 //!      `${ROCKET_ROOT}/templates`. The filename _must_ end with an extension
-//!      corresponding to an enabled engine. The second-to-last extension should
-//!      correspond to the file's type:
-//!
-//!      | Engine       | Extension | Example                                    |
-//!      |--------------|-----------|--------------------------------------------|
-//!      | [Tera]       | `.tera`   | `${ROCKET_ROOT}/templates/index.html.tera` |
+//!      of `.tera`, and the second-to-last extension should correspond to the
+//!      file's type, as in `${ROCKET_ROOT}/templates/index.html.tera`.
 //!
 //!      [configurable]: #configuration
 //!      [Tera]: https://docs.rs/crate/tera/1
@@ -146,7 +142,7 @@
 //!
 //! As long as one of [`Template::fairing()`], [`Template::custom()`], or
 //! [`Template::try_custom()`] is [attached], any file in the configured
-//! `template_dir` ending with a known engine extension (as described in the
+//! `template_dir` ending with the `.tera` extension (as described in the
 //! [usage section](#usage)) can be rendered. The latter two fairings allow
 //! customizations such as registering helpers and templates from strings.
 //!

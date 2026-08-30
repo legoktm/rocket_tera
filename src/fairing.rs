@@ -5,7 +5,7 @@ use rocket::trace::Trace;
 
 use crate::context::{Callback, Context, ContextManager};
 use crate::template::DEFAULT_TEMPLATE_DIR;
-use crate::engine::Engines;
+use crate::engine;
 
 /// The TemplateFairing initializes the template system on attach, running
 /// custom_callback after templates have been loaded. In debug mode, the fairing
@@ -13,7 +13,7 @@ use crate::engine::Engines;
 /// if necessary.
 pub struct TemplateFairing {
     /// The user-provided customization callback, allowing the use of
-    /// functionality specific to individual template engines. In debug mode,
+    /// functionality specific to the template engine. In debug mode,
     /// this callback might be run multiple times as templates are reloaded.
     pub callback: Callback,
 }
@@ -60,7 +60,7 @@ impl Fairing for TemplateFairing {
 
         span_info!("templating" => {
             info!(directory = %Source::from(&*cm.context().root));
-            info!(engines = ?Engines::ENABLED_EXTENSIONS);
+            info!(engine = engine::EXT);
         });
     }
 
