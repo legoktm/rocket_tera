@@ -9,9 +9,9 @@ use rocket::response::{self, Responder};
 use rocket::serde::Serialize;
 use rocket::{Ignite, Orbit, Rocket, Sentinel};
 
+use crate::Engines;
 use crate::context::{Context, ContextManager};
 use crate::fairing::TemplateFairing;
-use crate::Engines;
 
 pub(crate) const DEFAULT_TEMPLATE_DIR: &str = "templates";
 

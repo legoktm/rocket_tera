@@ -9,8 +9,8 @@ repository = "https://github.com/legoktm/rocket_tera"
 readme = "README.md"
 keywords = ["rocket", "framework", "templates", "templating", "tera"]
 license = "MIT OR Apache-2.0"
-edition = "2021"
-rust-version = "1.75"
+edition = "2024"
+rust-version = "1.88"
 
 [lints.rust]
 rust_2018_idioms = { level = "warn", priority = -1 }

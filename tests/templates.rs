@@ -7,7 +7,7 @@ use rocket::config::Config;
 use rocket::figment::value::Value;
 use rocket::serde::{Deserialize, Serialize};
 use rocket::{Build, Rocket};
-use rocket_tera::{context, Metadata, Template};
+use rocket_tera::{Metadata, Template, context};
 
 #[get("/<engine>/<name>")]
 fn template_check(md: Metadata<'_>, engine: &str, name: &str) -> Option<()> {
@@ -17,11 +17,7 @@ fn template_check(md: Metadata<'_>, engine: &str, name: &str) -> Option<()> {
 
 #[get("/is_reloading")]
 fn is_reloading(md: Metadata<'_>) -> Option<()> {
-    if md.reloading() {
-        Some(())
-    } else {
-        None
-    }
+    if md.reloading() { Some(()) } else { None }
 }
 
 fn template_root() -> PathBuf {

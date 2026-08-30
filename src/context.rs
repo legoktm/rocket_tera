@@ -137,10 +137,10 @@ mod manager {
 #[cfg(debug_assertions)]
 mod manager {
     use std::ops::{Deref, DerefMut};
-    use std::sync::mpsc::{channel, Receiver};
+    use std::sync::mpsc::{Receiver, channel};
     use std::sync::{Mutex, RwLock};
 
-    use notify::{recommended_watcher, Error, Event, RecommendedWatcher, RecursiveMode, Watcher};
+    use notify::{Error, Event, RecommendedWatcher, RecursiveMode, Watcher, recommended_watcher};
 
     use super::{Callback, Context};
 

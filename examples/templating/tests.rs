@@ -2,7 +2,7 @@ use super::rocket;
 
 use rocket::http::{Method::*, RawStr, Status};
 use rocket::local::blocking::Client;
-use rocket_tera::{context, Template};
+use rocket_tera::{Template, context};
 
 fn test_root(kind: &str) {
     // Check that the redirect works.
@@ -59,10 +59,12 @@ fn test_404(base: &str) {
 fn test_about(base: &str) {
     let client = Client::tracked(rocket()).unwrap();
     let response = client.get(format!("/{}/about", base)).dispatch();
-    assert!(response
-        .into_string()
-        .unwrap()
-        .contains("About - Here's another page!"));
+    assert!(
+        response
+            .into_string()
+            .unwrap()
+            .contains("About - Here's another page!")
+    );
 }
 
 #[test]

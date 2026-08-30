@@ -1,5 +1,5 @@
 use rocket::fairing::{self, Fairing, Info, Kind};
-use rocket::figment::{value::magic::RelativePathBuf, Source};
+use rocket::figment::{Source, value::magic::RelativePathBuf};
 use rocket::{Build, Orbit, Rocket};
 
 use crate::context::{Callback, Context, ContextManager};

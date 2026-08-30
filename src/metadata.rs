@@ -6,7 +6,7 @@ use rocket::request::{self, FromRequest};
 use rocket::serde::Serialize;
 use rocket::{Ignite, Request, Rocket, Sentinel};
 
-use crate::{context::ContextManager, Template};
+use crate::{Template, context::ContextManager};
 
 /// Request guard for dynamically querying template metadata.
 ///
