@@ -11,7 +11,7 @@ use rocket_tera::{Metadata, Template, context};
 
 #[get("/<engine>/<name>")]
 fn template_check(md: Metadata<'_>, engine: &str, name: &str) -> Option<()> {
-    md.contains_template(&format!("{}/{}", engine, name))
+    md.contains_template(&format!("{engine}/{name}"))
         .then_some(())
 }
 

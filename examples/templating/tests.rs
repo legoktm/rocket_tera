@@ -49,8 +49,8 @@ fn test_404() {
         let response = response.into_string().unwrap().to_lowercase();
 
         assert! {
-            response.contains(&format!("{} does not exist", path))
-                || response.contains(&format!("{} does not exist", escaped))
+            response.contains(&format!("{path} does not exist"))
+                || response.contains(&format!("{escaped} does not exist"))
         };
     }
 }

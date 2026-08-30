@@ -117,9 +117,9 @@ impl Template {
     /// [`rocket_tera::tera`]: crate::tera
     /// [`tera::Value`]: crate::tera::Value
     /// [`tera::Result`]: crate::tera::Result
-    pub fn customize<F: Send + Sync + 'static>(f: F) -> impl Fairing
+    pub fn customize<F>(f: F) -> impl Fairing
     where
-        F: Fn(&mut Tera),
+        F: Fn(&mut Tera) + Send + Sync + 'static,
     {
         Self::try_customize(move |tera| {
             f(tera);
@@ -153,9 +153,9 @@ impl Template {
     ///     # ;
     /// }
     /// ```
-    pub fn try_customize<F: Send + Sync + 'static>(f: F) -> impl Fairing
+    pub fn try_customize<F>(f: F) -> impl Fairing
     where
-        F: Fn(&mut Tera) -> Result<(), Box<dyn std::error::Error>>,
+        F: Fn(&mut Tera) -> Result<(), Box<dyn std::error::Error>> + Send + Sync + 'static,
     {
         TemplateFairing {
             callback: Box::new(f),

@@ -145,13 +145,16 @@ mod manager {
 
     use super::{Callback, Context};
 
+    /// A filesystem watcher paired with the receive queue for its events.
+    type Watched = (RecommendedWatcher, Mutex<Receiver<Result<Event, Error>>>);
+
     /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
     /// additionally provides a method to reload the context at runtime.
     pub(crate) struct ContextManager {
         /// The current template context, inside an RwLock so it can be updated.
         context: RwLock<Context>,
         /// A filesystem watcher and the receive queue for its events.
-        watcher: Option<(RecommendedWatcher, Mutex<Receiver<Result<Event, Error>>>)>,
+        watcher: Option<Watched>,
     }
 
     impl ContextManager {
@@ -270,7 +273,7 @@ mod tests {
                 let path = Path::new(root).join(sub).join("index.html.tera");
                 let (name, data_type) = split_path(Path::new(root), &path);
 
-                let expected_name = format!("{}index", sub);
+                let expected_name = format!("{sub}index");
                 assert_eq!(name, expected_name.as_str());
                 assert_eq!(data_type, Some("html".into()));
             }

@@ -43,16 +43,15 @@ jobs:
   rustdoc:
     name: rustdoc
     runs-on: ubuntu-latest
-    env:
-      RUSTDOCFLAGS: -D warnings -D rustdoc::all
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install toolchain
-        # Nightly: `rustdoc::all` includes lints that are nightly-only, notably
-        # `bare_urls` and `unescaped_backticks`.
+        # `rustdoc::all` is denied via `[lints.rustdoc]` in Cargo.toml. Nightly
+        # is used because that group contains lints that do not exist on stable,
+        # notably `bare_urls` and `unescaped_backticks`.
         run: rustup toolchain install nightly --profile minimal --no-self-update
 
       - name: rustdoc
