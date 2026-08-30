@@ -277,71 +277,6 @@ mod tera_tests {
 
         let response = client.get("/tera/not_existing").dispatch();
         assert_eq!(response.status(), Status::NotFound);
-
-        let response = client.get("/hbs/txt_test").dispatch();
-        assert_eq!(response.status(), Status::NotFound);
-    }
-}
-
-#[cfg(feature = "handlebars")]
-mod handlebars_tests {
-    use super::*;
-    use std::collections::HashMap;
-    use rocket::request::FromRequest;
-    use rocket::http::{ContentType, Status};
-    use pretty_assertions::assert_eq;
-
-    #[async_test]
-    async fn test_handlebars_templates() {
-        use rocket::local::asynchronous::Client;
-
-        const EXPECTED: &'static str
-            = "Hello _test_!\n<main> &lt;script /&gt; hi </main>\nDone.\n";
-
-        let client = Client::debug(rocket()).await.unwrap();
-        let req = client.get("/");
-        let metadata = Metadata::from_request(&req).await.unwrap();
-
-        let mut map = HashMap::new();
-        map.insert("title", "_test_");
-        map.insert("content", "<script /> hi");
-
-        // Test with a txt file, which shouldn't escape.
-        let template = Template::show(client.rocket(), "hbs/test", &map);
-        let md_rendered = metadata.render("hbs/test", &map);
-        assert_eq!(template, Some(EXPECTED.into()));
-        assert_eq!(md_rendered, Some((ContentType::HTML, EXPECTED.into())));
-    }
-
-    // u128 is not supported. enable when it is.
-    // #[test]
-    // fn test_handlebars_u128() {
-    //     const EXPECTED: &'static str
-    //         = "Hello 123!\n\n<main> 1208925819614629174706176 </main>\nDone.\n\n";
-    //
-    //     let client = Client::debug(rocket()).unwrap();
-    //     let mut map = HashMap::new();
-    //     map.insert("title", 123);
-    //     map.insert("number", 1u128 << 80);
-    //
-    //     let template = Template::show(client.rocket(), "hbs/test", &map);
-    //     assert_eq!(template, Some(EXPECTED.into()));
-    // }
-
-    #[test]
-    fn test_template_metadata_with_handlebars() {
-        use rocket::local::blocking::Client;
-
-        let client = Client::debug(rocket()).unwrap();
-
-        let response = client.get("/hbs/test").dispatch();
-        assert_eq!(response.status(), Status::Ok);
-
-        let response = client.get("/hbs/not_existing").dispatch();
-        assert_eq!(response.status(), Status::NotFound);
-
-        let response = client.get("/tera/test").dispatch();
-        assert_eq!(response.status(), Status::NotFound);
     }
 
     #[test]
@@ -353,7 +288,7 @@ mod handlebars_tests {
 
         use rocket::local::blocking::Client;
 
-        const RELOAD_TEMPLATE: &str = "hbs/reload";
+        const RELOAD_TEMPLATE: &str = "tera/reload";
         const INITIAL_TEXT: &str = "initial";
         const NEW_TEXT: &str = "reload";
 
@@ -365,7 +300,7 @@ mod handlebars_tests {
 
         // set up the template before initializing the Rocket instance so
         // that it will be picked up in the initial loading of templates.
-        let reload_path = template_root().join("hbs").join("reload.txt.hbs");
+        let reload_path = template_root().join("tera").join("reload.txt.tera");
         write_file(&reload_path, INITIAL_TEXT);
 
         // set up the client. if we can't reload templates, then just quit
@@ -376,7 +311,7 @@ mod handlebars_tests {
         }
 
         // verify that the initial content is correct
-        let initial_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
+        let initial_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, context! {});
         assert_eq!(initial_rendered, Some(INITIAL_TEXT.into()));
 
         // write a change to the file
@@ -387,7 +322,7 @@ mod handlebars_tests {
             client.get("/").dispatch();
 
             // if the new content is correct, we are done
-            let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
+            let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, context! {});
             if new_rendered == Some(NEW_TEXT.into()) {
                 write_file(&reload_path, INITIAL_TEXT);
                 return;
@@ -398,89 +333,5 @@ mod handlebars_tests {
         }
 
         panic!("failed to reload modified template in 1.5s");
-    }
-}
-
-#[cfg(feature = "minijinja")]
-mod j2_tests {
-    use super::*;
-    use std::collections::HashMap;
-    use rocket::http::{ContentType, Status};
-    use rocket::request::FromRequest;
-    use pretty_assertions::assert_eq;
-
-    const UNESCAPED_EXPECTED: &'static str
-        = "\nh_start\ntitle: _test_\nh_end\n\n\n<script />\n\nfoot";
-    const ESCAPED_EXPECTED: &'static str
-        = "\nh_start\ntitle: _test_\nh_end\n\n\n&lt;script &#x2f;&gt;\n\nfoot";
-
-    #[async_test]
-    async fn test_j2_templates() {
-        use rocket::local::asynchronous::Client;
-
-        let client = Client::debug(rocket()).await.unwrap();
-        let req = client.get("/");
-        let metadata = Metadata::from_request(&req).await.unwrap();
-
-        let mut map = HashMap::new();
-        map.insert("title", "_test_");
-        map.insert("content", "<script />");
-
-        // Test with a txt file, which shouldn't escape.
-        let template = Template::show(client.rocket(), "j2/txt_test", &map);
-        let md_rendered = (&metadata).render("j2/txt_test", &map);
-        assert_eq!(template, Some(UNESCAPED_EXPECTED.into()));
-        assert_eq!(md_rendered, Some((ContentType::Text, UNESCAPED_EXPECTED.into())));
-
-        // Now with an HTML file, which should escaped.
-        let template = Template::show(client.rocket(), "j2/html_test", &map);
-        let md_rendered = metadata.render("j2/html_test", &map);
-        assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
-        assert_eq!(md_rendered, Some((ContentType::HTML, ESCAPED_EXPECTED.into())));
-    }
-
-    #[async_test]
-    async fn test_globby_paths() {
-        use rocket::local::asynchronous::Client;
-
-        let client = Client::debug(rocket()).await.unwrap();
-        let req = client.get("/");
-        let metadata = Metadata::from_request(&req).await.unwrap();
-        assert!(metadata.contains_template("j2/[test]/html_test"));
-    }
-
-    #[test]
-    fn test_j2_u128() {
-        const EXPECTED: &'static str
-            = "\nh_start\ntitle: 123\nh_end\n\n\n1208925819614629174706176\n\nfoot";
-
-        use rocket::local::blocking::Client;
-
-        let client = Client::debug(rocket()).unwrap();
-        let mut map = HashMap::new();
-        map.insert("title", 123);
-        map.insert("content", 1u128 << 80);
-
-        let template = Template::show(client.rocket(), "j2/txt_test", &map);
-        assert_eq!(template, Some(EXPECTED.into()));
-    }
-
-    #[test]
-    fn test_template_metadata_with_j2() {
-        use rocket::local::blocking::Client;
-
-        let client = Client::debug(rocket()).unwrap();
-
-        let response = client.get("/j2/txt_test").dispatch();
-        assert_eq!(response.status(), Status::Ok);
-
-        let response = client.get("/j2/html_test").dispatch();
-        assert_eq!(response.status(), Status::Ok);
-
-        let response = client.get("/j2/not_existing").dispatch();
-        assert_eq!(response.status(), Status::NotFound);
-
-        let response = client.get("/hbs/txt_test").dispatch();
-        assert_eq!(response.status(), Status::NotFound);
     }
 }

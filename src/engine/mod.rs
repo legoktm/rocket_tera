@@ -10,16 +10,6 @@ mod tera;
 #[cfg(feature = "tera")]
 use ::tera::Tera;
 
-#[cfg(feature = "handlebars")]
-mod handlebars;
-#[cfg(feature = "handlebars")]
-use ::handlebars::Handlebars;
-
-#[cfg(feature = "minijinja")]
-mod minijinja;
-#[cfg(feature = "minijinja")]
-use ::minijinja::Environment;
-
 pub(crate) trait Engine: Send + Sync + Sized + 'static {
     const EXT: &'static str;
 
@@ -71,31 +61,11 @@ pub struct Engines {
     /// from `rocket_dyn_templates::tera` to avoid version mismatches.
     #[cfg(feature = "tera")]
     pub tera: Tera,
-
-    /// The Handlebars templating engine.
-    ///
-    /// This field is only available when the `handlebars` feature is enabled.
-    /// When calling methods on the `Handlebars` instance, ensure you use types
-    /// imported from `rocket_dyn_templates::handlebars` to avoid version
-    /// mismatches.
-    #[cfg(feature = "handlebars")]
-    pub handlebars: Handlebars<'static>,
-
-    /// The minijinja templating engine.
-    ///
-    /// This field is only available when the `minijinja` feature is enabled.
-    /// When calling methods on the [`Environment`] instance, ensure you use
-    /// types imported from `rocket_dyn_templates::minijinja` to avoid version
-    /// mismatches.
-    #[cfg(feature = "minijinja")]
-    pub minijinja: Environment<'static>,
 }
 
 impl Engines {
     pub(crate) const ENABLED_EXTENSIONS: &'static [&'static str] = &[
         #[cfg(feature = "tera")] Tera::EXT,
-        #[cfg(feature = "handlebars")] Handlebars::EXT,
-        #[cfg(feature = "minijinja")] Environment::EXT,
     ];
 
     pub(crate) fn init(templates: &HashMap<String, TemplateInfo>) -> Option<Engines> {
@@ -114,16 +84,6 @@ impl Engines {
                 Some(tera) => tera,
                 None => return None
             },
-            #[cfg(feature = "handlebars")]
-            handlebars: match inner::<Handlebars<'static>>(templates) {
-                Some(hb) => hb,
-                None => return None
-            },
-            #[cfg(feature = "minijinja")]
-            minijinja: match inner::<Environment<'static>>(templates) {
-                Some(hb) => hb,
-                None => return None
-            },
         })
     }
 
@@ -139,18 +99,6 @@ impl Engines {
             }
         }
 
-        #[cfg(feature = "handlebars")] {
-            if info.engine_ext == Handlebars::EXT {
-                return Engine::render(&self.handlebars, name, context);
-            }
-        }
-
-        #[cfg(feature = "minijinja")] {
-            if info.engine_ext == Environment::EXT {
-                return Engine::render(&self.minijinja, name, context);
-            }
-        }
-
         None
     }
 
@@ -159,18 +107,8 @@ impl Engines {
         #[cfg(feature = "tera")]
         let tera = self.tera.get_template_names().map(|name| (name, Tera::EXT));
 
-        #[cfg(feature = "handlebars")]
-        let handlebars = self.handlebars.get_templates().keys()
-                .map(|name| (name.as_str(), Handlebars::EXT));
-
-        #[cfg(feature = "minijinja")]
-        let minijinja = self.minijinja.templates()
-            .map(|(name, _)| (name, Environment::EXT));
-
         #[cfg(not(feature = "tera"))] let tera = std::iter::empty();
-        #[cfg(not(feature = "handlebars"))] let handlebars = std::iter::empty();
-        #[cfg(not(feature = "minijinja"))] let minijinja = std::iter::empty();
 
-        tera.chain(handlebars).chain(minijinja)
+        tera
     }
 }

@@ -230,7 +230,7 @@ mod tests {
     #[test]
     fn template_path_index_html() {
         for root in &["/", "/a/b/c/", "/a/b/c/d/", "/a/"] {
-            for filename in &["index.html.hbs", "index.html.tera"] {
+            for filename in &["index.html.tera"] {
                 let path = Path::new(root).join(filename);
                 let (name, data_type) = split_path(Path::new(root), &path);
 
@@ -244,7 +244,7 @@ mod tests {
     fn template_path_subdir_index_html() {
         for root in &["/", "/a/b/c/", "/a/b/c/d/", "/a/"] {
             for sub in &["a/", "a/b/", "a/b/c/", "a/b/c/d/"] {
-                for filename in &["index.html.hbs", "index.html.tera"] {
+                for filename in &["index.html.tera"] {
                     let path = Path::new(root).join(sub).join(filename);
                     let (name, data_type) = split_path(Path::new(root), &path);
 
@@ -262,12 +262,11 @@ mod tests {
             split_path(Path::new("templates/"), &Path::new("templates/").join(path)).0
         }
 
-        assert_eq!(name_for("index.html.hbs"), "index");
+        assert_eq!(name_for("index.html.tera"), "index");
         assert_eq!(name_for("index.tera"), "index");
-        assert_eq!(name_for("index.hbs"), "index");
-        assert_eq!(name_for("dir/index.hbs"), "dir/index");
+        assert_eq!(name_for("dir/index.tera"), "dir/index");
         assert_eq!(name_for("dir/index.html.tera"), "dir/index");
-        assert_eq!(name_for("index.template.html.hbs"), "index.template");
-        assert_eq!(name_for("subdir/index.template.html.hbs"), "subdir/index.template");
+        assert_eq!(name_for("index.template.html.tera"), "index.template");
+        assert_eq!(name_for("subdir/index.template.html.tera"), "subdir/index.template");
     }
 }

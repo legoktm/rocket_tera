@@ -3,17 +3,16 @@
 //! This crate adds support for dynamic template rendering to Rocket. It
 //! automatically discovers templates, provides a `Responder` to render
 //! templates, and automatically reloads templates when compiled in debug mode.
-//! At present, it supports [Handlebars] and [Tera].
+//! At present, it supports [Tera].
 //!
 //! # Usage
 //!
-//!   1. Depend on `rocket_dyn_templates`. Enable the feature(s) corresponding
-//!      to your templating engine(s) of choice:
+//!   1. Depend on `rocket_dyn_templates`, enabling the `tera` feature:
 //!
 //!      ```toml
 //!      [dependencies.rocket_dyn_templates]
 //!      version = "0.1.0"
-//!      features = ["handlebars", "tera", "minijinja"]
+//!      features = ["tera"]
 //!      ```
 //!
 //!   2. Write your templates inside of the [configurable]
@@ -24,13 +23,9 @@
 //!      | Engine       | Extension | Example                                    |
 //!      |--------------|-----------|--------------------------------------------|
 //!      | [Tera]       | `.tera`   | `${ROCKET_ROOT}/templates/index.html.tera` |
-//!      | [Handlebars] | `.hbs`    | `${ROCKET_ROOT}/templates/index.html.hbs`  |
-//!      | [MiniJinja]  | `.j2`     | `${ROCKET_ROOT}/templates/index.html.j2`   |
 //!
 //!      [configurable]: #configuration
 //!      [Tera]: https://docs.rs/crate/tera/1
-//!      [Handlebars]: https://docs.rs/crate/handlebars/6
-//!      [MiniJinja]: https://docs.rs/minijinja/2
 //!
 //!   3. Attach `Template::fairing()` and return a [`Template`] from your routes
 //!      via [`Template::render()`], supplying the name of the template file
@@ -95,18 +90,16 @@
 //!
 //! | template path                                 | [`Template::render()`] call       | content-type |
 //! |-----------------------------------------------|-----------------------------------|--------------|
-//! | {template_dir}/index.html.hbs                 | `render("index")`                 | HTML         |
-//! | {template_dir}/index.tera                     | `render("index")`                 | `text/plain` |
-//! | {template_dir}/index.hbs                      | `render("index")`                 | `text/plain` |
-//! | {template_dir}/dir/index.hbs                  | `render("dir/index")`             | `text/plain` |
-//! | {template_dir}/dir/data.json.tera             | `render("dir/data")`              | JSON         |
-//! | {template_dir}/data.template.xml.hbs          | `render("data.template")`         | XML          |
-//! | {template_dir}/subdir/index.template.html.hbs | `render("subdir/index.template")` | HTML         |
+//! | {template_dir}/index.html.tera                 | `render("index")`                 | HTML         |
+//! | {template_dir}/index.tera                      | `render("index")`                 | `text/plain` |
+//! | {template_dir}/dir/index.tera                  | `render("dir/index")`             | `text/plain` |
+//! | {template_dir}/dir/data.json.tera              | `render("dir/data")`              | JSON         |
+//! | {template_dir}/data.template.xml.tera          | `render("data.template")`         | XML          |
+//! | {template_dir}/subdir/index.template.html.tera | `render("subdir/index.template")` | HTML         |
 //!
 //! The recommended naming scheme is to use two extensions: one for the file
 //! type, and one for the template extension. This means that template
-//! extensions should look like: `.html.hbs`, `.html.tera`, `.xml.hbs`, and so
-//! on.
+//! extensions should look like: `.html.tera`, `.xml.tera`, and so on.
 //!
 //! [`ContentType::from_extension()`]: ../rocket/http/struct.ContentType.html#method.from_extension
 //!
@@ -186,16 +179,6 @@
 #[cfg(feature = "tera")]
 /// The tera templating engine library, reexported.
 pub use tera;
-
-#[doc(inline)]
-#[cfg(feature = "handlebars")]
-/// The handlebars templating engine library, reexported.
-pub use handlebars;
-
-#[doc(inline)]
-#[cfg(feature = "minijinja")]
-/// The minijinja templating engine library, reexported.
-pub use minijinja;
 
 #[doc(hidden)]
 pub use rocket::serde;
