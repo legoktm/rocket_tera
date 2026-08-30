@@ -52,9 +52,9 @@
 //!
 //!   * `template_dir` (**default: `templates/`**)
 //!
-//!      A path to a directory to search for template files in. Relative paths
-//!      are considered relative to the configuration file, or there is no file,
-//!      the current working directory.
+//!     A path to a directory to search for template files in. Relative paths
+//!     are considered relative to the configuration file, or there is no file,
+//!     the current working directory.
 //!
 //! For example, to change the default and set `template_dir` to different
 //! values based on whether the application was compiled for debug or release

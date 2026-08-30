@@ -80,10 +80,7 @@ impl Engines {
 
         Some(Engines {
             #[cfg(feature = "tera")]
-            tera: match inner::<Tera>(templates) {
-                Some(tera) => tera,
-                None => return None
-            },
+            tera: inner::<Tera>(templates)?,
         })
     }
 

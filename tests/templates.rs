@@ -10,7 +10,7 @@ use rocket_dyn_templates::{Template, Metadata, context};
 
 #[get("/<engine>/<name>")]
 fn template_check(md: Metadata<'_>, engine: &str, name: &str) -> Option<()> {
-    md.contains_template(&format!("{}/{}", engine, name)).then(|| ())
+    md.contains_template(&format!("{}/{}", engine, name)).then_some(())
 }
 
 #[get("/is_reloading")]
@@ -195,8 +195,12 @@ fn test_context_macro() {
         let owned = String::from("foo");
         let ctx = context! { a: &owned };
         assert_same_object!(ctx, Object { a: "foo".into() });
-        drop(ctx);
-        drop(owned);
+        // The explicit drops are the point: the context must be droppable
+        // before the value it borrows.
+        #[allow(clippy::drop_non_drop)] {
+            drop(ctx);
+            drop(owned);
+        }
     }
 }
 
@@ -208,9 +212,9 @@ mod tera_tests {
     use rocket::request::FromRequest;
     use pretty_assertions::assert_eq;
 
-    const UNESCAPED_EXPECTED: &'static str
+    const UNESCAPED_EXPECTED: &str
         = "\nh_start\ntitle: _test_\nh_end\n\n\n<script />\n\nfoot";
-    const ESCAPED_EXPECTED: &'static str
+    const ESCAPED_EXPECTED: &str
         = "\nh_start\ntitle: _test_\nh_end\n\n\n&lt;script &#x2F;&gt;\n\nfoot";
 
     #[async_test]
