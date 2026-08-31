@@ -134,13 +134,13 @@
 //!
 //! ### Discovery, Automatic Reloads, and Engine Customization
 //!
-//! As long as one of [`Template::fairing()`], [`Template::customize()`], or
-//! [`Template::try_customize()`] is [attached], every file in the configured
+//! As long as one of [`Template::fairing()`], [`Template::custom()`], or
+//! [`Template::try_custom()`] is [attached], every file in the configured
 //! `template_dir` is registered with Tera and can be rendered. Files that are
 //! not valid Tera templates will abort the launch, so keep non-template assets
 //! out of `template_dir`.
 //!
-//! _**Note:** Templates that are registered directly via [`Template::customize()`]
+//! _**Note:** Templates that are registered directly via [`Template::custom()`]
 //! use whatever name was provided during that registration._
 //!
 //! In debug mode (without the `--release` flag passed to `cargo`), templates

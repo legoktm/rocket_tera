@@ -64,5 +64,5 @@ fn rocket() -> _ {
     rocket::custom(figment)
         .mount("/", routes![index, hello, about])
         .register("/", catchers![not_found])
-        .attach(Template::customize(customize))
+        .attach(Template::custom(customize))
 }
