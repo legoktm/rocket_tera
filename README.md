@@ -36,6 +36,12 @@ See the [crate docs](https://docs.rs/rocket_tera) for full details.
 
 This crate is intended to be used with trusted templates that are shipped alongside your Rocket application. Using untrusted or user-provided templates is out of scope of this crate's threat model.
 
+# Versions
+
+The 2.x series is the primary release and actively supported.
+
+The 1.x series uses Tera 1.0 and exists primarily to ease migrating to this crate. It will be maintained until the end of 2026 (at least).
+
 # History
 
 This was originally forked from the `rocket_dyn_templates` crate, which was maintained as part of Rocket upstream.
