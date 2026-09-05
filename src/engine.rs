@@ -6,10 +6,11 @@ use tera::{Context, Tera};
 
 use crate::template::TemplateInfo;
 
-/// Creates an empty `Tera` instance.
+/// Initializes `Tera` instance.
 pub(crate) fn init() -> Tera {
     let mut tera = Tera::default();
     tera.autoescape_on([".html", ".htm", ".xml"]);
+    crate::contrib::register(&mut tera);
     tera
 }
 

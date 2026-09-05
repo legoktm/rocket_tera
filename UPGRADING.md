@@ -2,6 +2,9 @@
 
 The main change in this release is upgrading to [`tera 2.0`](https://keats.github.io/tera/). You'll need to review the [upstream migration guide](https://github.com/Keats/tera/blob/master/MIGRATION.md) to adjust your templates, and any other code that uses tera APIs.
 
+Filters, functions and tests that relied on other dependencies were moved into a separate `tera-contrib` crate. You will need to enable the corresponding `contrib-{name}` feature in this crate to be able to use
+that functionality again.
+
 Tera also changes the initalization order, which required changes to `Template::custom()` and `try_custom()`. Filters, functions, etc. must be registered before templates, so `custom()` now takes two callbacks: `register` and `finalize`. The loading order is:
 
 1) `register` callback, for filters, functions, etc.

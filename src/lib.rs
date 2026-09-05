@@ -178,6 +178,25 @@
 //!
 //! [attached]: rocket::Rocket::attach()
 //!
+//! ### `tera-contrib` Features
+//!
+//! Tera 2 moved builtin features that required other dependencies to the [`tera-contrib`] crate.
+//! Enabling a `contrib-*` feature here enables and registers the matching `tera-contrib` feature:
+//!
+//! | Feature | Registers |
+//! |---------|-----------|
+//! | `contrib-base64` | `b64_encode`, `b64_decode` filters |
+//! | `contrib-date` | `date` filter, `now` function, `before` / `after` tests |
+//! | `contrib-filesize_format` | `filesize_format` filter |
+//! | `contrib-format` | `format` filter |
+//! | `contrib-json` | `json_encode` filter |
+//! | `contrib-rand` | `get_random` function, `shuffle` filter |
+//! | `contrib-regex` | `striptags`, `spaceless`, `regex_replace` filters, `matching` test |
+//! | `contrib-slug` | `slug` filter |
+//! | `contrib-urlencode` | `urlencode`, `urlencode_strict` filters |
+//!
+//! [`tera-contrib`]: https://docs.rs/tera-contrib/0.3
+//!
 //! ### Metadata and Rendering to `String`
 //!
 //! The [`Metadata`] request guard allows dynamically querying templating
@@ -196,6 +215,7 @@ pub use tera;
 pub use rocket::serde;
 
 mod context;
+mod contrib;
 mod engine;
 mod fairing;
 mod metadata;

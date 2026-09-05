@@ -40,6 +40,9 @@ jobs:
       - name: clippy
         run: cargo +stable clippy --all-targets -- -D warnings
 
+      - name: clippy (all features)
+        run: cargo +stable clippy --all-targets --all-features -- -D warnings
+
   rustdoc:
     name: rustdoc
     runs-on: ubuntu-latest
@@ -52,7 +55,7 @@ jobs:
         run: rustup toolchain install nightly --profile minimal --no-self-update
 
       - name: rustdoc
-        run: cargo +nightly doc --no-deps
+        run: cargo +nightly doc --no-deps --all-features
 
   test:
     name: ${{ matrix.toolchain }}
@@ -91,5 +94,11 @@ jobs:
 
       - name: test
         run: cargo +${TOOLCHAIN} test
+        env:
+          TOOLCHAIN: ${{ steps.resolve.outputs.toolchain }}
+
+      # The `contrib-*` features are off by default, so they need their own run.
+      - name: test (all features)
+        run: cargo +${TOOLCHAIN} test --all-features
         env:
           TOOLCHAIN: ${{ steps.resolve.outputs.toolchain }}

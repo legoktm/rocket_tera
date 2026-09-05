@@ -12,6 +12,9 @@ license = "MIT OR Apache-2.0"
 edition = "2024"
 rust-version = "1.88"
 
+[package.metadata.docs.rs]
+all-features = true
+
 [lints.clippy]
 all = {level = "deny", priority = -1}
 uninlined_format_args = "deny"
@@ -25,6 +28,22 @@ notify = "8"
 normpath = "1"
 
 tera = "2.3.0"
+
+[features]
+contrib-base64 = ["dep:tera-contrib", "tera-contrib/base64"]
+contrib-date = ["dep:tera-contrib", "tera-contrib/date"]
+contrib-filesize_format = ["dep:tera-contrib", "tera-contrib/filesize_format"]
+contrib-format = ["dep:tera-contrib", "tera-contrib/format"]
+contrib-json = ["dep:tera-contrib", "tera-contrib/json"]
+contrib-rand = ["dep:tera-contrib", "tera-contrib/rand"]
+contrib-regex = ["dep:tera-contrib", "tera-contrib/regex"]
+contrib-slug = ["dep:tera-contrib", "tera-contrib/slug"]
+contrib-urlencode = ["dep:tera-contrib", "tera-contrib/urlencode"]
+
+[dependencies.tera-contrib]
+version = "0.3"
+optional = true
+default-features = false
 
 [dependencies.rocket]
 version = "0.5.1"
