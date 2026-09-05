@@ -12,6 +12,12 @@ use tera::Tera;
 pub(crate) type Callback =
     Box<dyn Fn(&mut Tera) -> Result<(), Box<dyn Error>> + Send + Sync + 'static>;
 
+/// The pair of user-provided callbacks run around template loading.
+pub(crate) struct Callbacks {
+    pub(crate) register: Callback,
+    pub(crate) finalize: Callback,
+}
+
 pub(crate) struct Context {
     /// The root of the template directory.
     pub root: PathBuf,
@@ -27,7 +33,7 @@ impl Context {
     /// Load all of the templates at `root`, initialize them using the relevant
     /// template engine, and store all of the initialized state in a `Context`
     /// structure, which is returned if all goes well.
-    pub fn initialize(root: &Path, callback: &Callback) -> Option<Context> {
+    pub fn initialize(root: &Path, callbacks: &Callbacks) -> Option<Context> {
         let root = match root.normalize() {
             Ok(root) => root.into_path_buf(),
             Err(e) => {
@@ -74,12 +80,14 @@ impl Context {
             );
         }
 
-        let mut tera = engine::init(&templates)?;
-        if let Err(reason) = callback(&mut tera) {
-            error_!("Template customization callback failed.");
-            error_!("{}", reason);
-            return None;
-        }
+        // We load in 3 stages:
+        // 1) user-specified registration of filters, functions, etc.
+        // 2) loading templates from disk
+        // 3) user-specified finalization, which could be loading other templates
+        let mut tera = engine::init();
+        run(&callbacks.register, &mut tera, "register")?;
+        engine::load(&mut tera, &templates)?;
+        run(&callbacks.finalize, &mut tera, "finalize")?;
 
         for name in tera.get_template_names() {
             if !templates.contains_key(name) {
@@ -102,6 +110,19 @@ impl Context {
             templates,
             tera,
         })
+    }
+}
+
+/// Runs one user-provided `callback`, named `name` in any error message.
+fn run(callback: &Callback, tera: &mut Tera, name: &str) -> Option<()> {
+    match callback(tera) {
+        Ok(()) => Some(()),
+        Err(reason) => {
+            error_!("Template `{}` callback failed.", name);
+            error_!("{}", reason);
+            engine::log_error(&*reason);
+            None
+        }
     }
 }
 
@@ -137,7 +158,7 @@ mod manager {
 
     use notify::{Error, Event, RecommendedWatcher, RecursiveMode, Watcher, recommended_watcher};
 
-    use super::{Callback, Context};
+    use super::{Callbacks, Context};
 
     /// A filesystem watcher paired with the receive queue for its events.
     type Watched = (RecommendedWatcher, Mutex<Receiver<Result<Event, Error>>>);
@@ -190,9 +211,9 @@ mod manager {
 
         /// Checks whether any template files have changed on disk. If there
         /// have been changes since the last reload, all templates are
-        /// reinitialized from disk and the user's customization callback is run
-        /// again.
-        pub fn reload_if_needed(&self, callback: &Callback) {
+        /// reinitialized from disk and the user's customization callbacks are
+        /// run again.
+        pub fn reload_if_needed(&self, callbacks: &Callbacks) {
             let templates_changes = self
                 .watcher
                 .as_ref()
@@ -201,7 +222,7 @@ mod manager {
             if let Some(true) = templates_changes {
                 debug!("template change detected: reloading templates");
                 let root = self.context().root.clone();
-                if let Some(new_ctxt) = Context::initialize(&root, callback) {
+                if let Some(new_ctxt) = Context::initialize(&root, callbacks) {
                     *self.context_mut() = new_ctxt;
                 } else {
                     warn!(

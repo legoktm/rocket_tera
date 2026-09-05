@@ -6,7 +6,8 @@ mod tests;
 
 use rocket::Request;
 use rocket::response::Redirect;
-use rocket_tera::{Template, context, tera::Tera};
+use rocket_tera::tera::{Kwargs, State, Tera};
+use rocket_tera::{Template, context};
 
 /// Templates live next to this example, not in the current working directory,
 /// so that `cargo run --example templating` works from anywhere in the repo.
@@ -39,9 +40,16 @@ fn not_found(req: &Request<'_>) -> Template {
     Template::render("error/404.html", context! { uri: req.uri() })
 }
 
+/// A custom filter, used by `index.html`. Filters must be registered before
+/// the templates that use them are loaded, so this runs in `register`.
+fn shout(value: &str, _: Kwargs, _: &State) -> String {
+    value.to_uppercase()
+}
+
 /// Templates need not come from disk: this one is registered at startup, and is
-/// re-registered on every reload in debug mode.
-fn customize(tera: &mut Tera) {
+/// re-registered on every reload in debug mode. It runs in `finalize` so that
+/// `base.html`, loaded from disk, is already available to extend.
+fn add_about_page(tera: &mut Tera) {
     tera.add_raw_template(
         "about.html",
         r#"
@@ -64,5 +72,8 @@ fn rocket() -> _ {
     rocket::custom(figment)
         .mount("/", routes![index, hello, about])
         .register("/", catchers![not_found])
-        .attach(Template::custom(customize))
+        .attach(Template::custom(
+            |tera| tera.register_filter("shout", shout),
+            add_about_page,
+        ))
 }

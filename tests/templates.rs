@@ -7,6 +7,7 @@ use rocket::config::Config;
 use rocket::figment::value::Value;
 use rocket::serde::{Deserialize, Serialize};
 use rocket::{Build, Rocket};
+use rocket_tera::tera::{Kwargs, State, Tera};
 use rocket_tera::{Metadata, Template, context};
 
 #[get("/<name>")]
@@ -31,19 +32,104 @@ fn rocket() -> Rocket<Build> {
         .mount("/", routes![template_check, is_reloading])
 }
 
-#[test]
-fn test_callback_error() {
+/// Asserts that launching `rocket` fails because the "Templating" fairing did.
+#[track_caller]
+fn assert_templating_fairing_failed(rocket: Rocket<Build>) {
     use rocket::{error::ErrorKind::FailedFairings, local::blocking::Client};
-
-    let rocket = rocket::build().attach(Template::try_custom(|_| {
-        Err("error reloading templates!".into())
-    }));
 
     let error = Client::debug(rocket).expect_err("client failure");
     match error.kind() {
         FailedFairings(failures) => assert_eq!(failures[0].name, "Templating"),
         _ => panic!("Wrong kind of launch error"),
     }
+}
+
+#[test]
+fn test_register_callback_error() {
+    assert_templating_fairing_failed(rocket::build().attach(Template::try_custom(
+        |_| Err("error registering with Tera!".into()),
+        |_| Ok(()),
+    )));
+}
+
+#[test]
+fn test_finalize_callback_error() {
+    assert_templating_fairing_failed(rocket::build().attach(Template::try_custom(
+        |_| Ok(()),
+        |_| Err("error finalizing templates!".into()),
+    )));
+}
+
+/// A custom filter, registered by the callback ordering tests below.
+fn shout(value: &str, _: Kwargs, _: &State) -> String {
+    value.to_uppercase()
+}
+
+/// Registers a template that extends `base.txt`, which is only loaded from
+/// disk, so this can only succeed once template loading has happened.
+fn add_extending_template(tera: &mut Tera) -> Result<(), Box<dyn std::error::Error>> {
+    tera.add_raw_template(
+        "extends.txt",
+        r#"{% extends "base.txt" %}{% block content %}{{ value }}{% endblock content %}"#,
+    )?;
+
+    Ok(())
+}
+
+/// Builds a Rocket serving [`order_templates`], which contains a template using
+/// the `shout` filter and a base template meant to be extended.
+fn order_rocket() -> Rocket<Build> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("order_templates");
+
+    rocket::custom(Config::figment().merge(("template_dir", root)))
+}
+
+#[test]
+fn test_callback_ordering() {
+    use rocket::local::blocking::Client;
+
+    // `register` runs first, so its filter is known by the time the template
+    // using it is loaded; `finalize` runs last, so it can extend a template
+    // that was loaded from disk.
+    let rocket = order_rocket().attach(Template::try_custom(
+        |tera| {
+            tera.register_filter("shout", shout);
+            Ok(())
+        },
+        add_extending_template,
+    ));
+
+    let client = Client::debug(rocket).expect("launch succeeds");
+    let ctx = context! { value: "hi" };
+    assert_eq!(
+        Template::show(client.rocket(), "filtered.txt", &ctx),
+        Some("HI".into())
+    );
+    assert_eq!(
+        Template::show(client.rocket(), "extends.txt", &ctx),
+        Some("[hi]\n".into())
+    );
+}
+
+#[test]
+fn test_filter_registered_too_late() {
+    // Registering the filter in `finalize` is too late: Tera validates the
+    // filters a template names while loading it, which happens first.
+    assert_templating_fairing_failed(order_rocket().attach(Template::custom(
+        |_| {},
+        |tera| tera.register_filter("shout", shout),
+    )));
+}
+
+#[test]
+fn test_extending_too_early() {
+    // Conversely, extending `base.txt` in `register` is too early: nothing
+    // has been loaded from disk yet.
+    assert_templating_fairing_failed(
+        order_rocket().attach(Template::try_custom(add_extending_template, |_| Ok(()))),
+    );
 }
 
 #[get("/")]
@@ -213,8 +299,7 @@ mod tera_tests {
     use std::collections::HashMap;
 
     const UNESCAPED_EXPECTED: &str = "\nh_start\ntitle: _test_\nh_end\n\n\n<script />\n\nfoot";
-    const ESCAPED_EXPECTED: &str =
-        "\nh_start\ntitle: _test_\nh_end\n\n\n&lt;script &#x2F;&gt;\n\nfoot";
+    const ESCAPED_EXPECTED: &str = "\nh_start\ntitle: _test_\nh_end\n\n\n&lt;script /&gt;\n\nfoot";
 
     #[async_test]
     async fn test_tera_templates() {

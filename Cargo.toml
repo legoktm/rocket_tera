@@ -24,7 +24,7 @@ walkdir = "2.4"
 notify = "8"
 normpath = "1"
 
-tera = "1.19.0"
+tera = "2.3.0"
 
 [dependencies.rocket]
 version = "0.5.1"

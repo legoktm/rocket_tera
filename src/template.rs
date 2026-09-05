@@ -10,7 +10,7 @@ use rocket::serde::Serialize;
 use rocket::{Ignite, Orbit, Rocket, Sentinel};
 use tera::Tera;
 
-use crate::context::{Context, ContextManager};
+use crate::context::{Callbacks, Context, ContextManager};
 use crate::engine;
 use crate::fairing::TemplateFairing;
 
@@ -69,22 +69,27 @@ impl Template {
     /// }
     /// ```
     pub fn fairing() -> impl Fairing {
-        Template::custom(|_| {})
+        Template::custom(|_| {}, |_| {})
     }
 
     /// Returns a fairing that initializes and maintains templating state.
     ///
     /// Unlike [`Template::fairing()`], this method allows you to configure the
-    /// [`Tera`] instance via the function `f`.
+    /// [`Tera`] instance, via `register` before the templates in
+    /// `template_dir` are loaded and via `finalize` after:
     ///
-    /// This method does not allow the function `f` to fail. If `f` is fallible,
+    ///   1. `register` to add filters, functions, and tests
+    ///   2. then the templates in `template_dir` are loaded,
+    ///   3. `finalize` allows adding additional templates
+    ///
+    /// This method does not allow the callbacks to fail. If either is fallible,
     /// use [`Template::try_custom()`] instead.
     ///
     /// Calling methods on [`Tera`] may require importing types from the `tera`
     /// crate. Import them from the reexport at [`rocket_tera::tera`] rather than
     /// depending on `tera` directly, so that the versions cannot mismatch. For
-    /// instance, registering a filter requires [`tera::Value`] and
-    /// [`tera::Result`]:
+    /// instance, registering a filter requires [`tera::Kwargs`] and
+    /// [`tera::State`]:
     ///
     /// # Example
     ///
@@ -92,47 +97,58 @@ impl Template {
     /// extern crate rocket;
     /// extern crate rocket_tera;
     ///
-    /// use std::collections::HashMap;
-    ///
     /// use rocket_tera::Template;
-    /// use rocket_tera::tera::{self, Value};
+    /// use rocket_tera::tera::{Kwargs, State};
     ///
-    /// fn my_filter(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
-    ///     # /*
-    ///     ...
-    ///     # */ unimplemented!();
+    /// fn shout(value: &str, _: Kwargs, _: &State) -> String {
+    ///     value.to_uppercase()
     /// }
     ///
     /// fn main() {
     ///     rocket::build()
     ///         // ...
-    ///         .attach(Template::custom(|tera| {
-    ///             tera.register_filter("my_filter", my_filter);
-    ///         }))
+    ///         .attach(Template::custom(
+    ///             |tera| tera.register_filter("shout", shout),
+    ///             |tera| {
+    ///                 tera.add_raw_template("greeting.html", "{{ name | shout }}")
+    ///                     .expect("valid Tera template");
+    ///             },
+    ///         ))
     ///         // ...
     ///     # ;
     /// }
     /// ```
     ///
+    /// [`Tera`]: crate::tera::Tera
     /// [`rocket_tera::tera`]: crate::tera
-    /// [`tera::Value`]: crate::tera::Value
-    /// [`tera::Result`]: crate::tera::Result
-    pub fn custom<F>(f: F) -> impl Fairing
+    /// [`tera::Kwargs`]: crate::tera::Kwargs
+    /// [`tera::State`]: crate::tera::State
+    pub fn custom<R, F>(register: R, finalize: F) -> impl Fairing
     where
+        R: Fn(&mut Tera) + Send + Sync + 'static,
         F: Fn(&mut Tera) + Send + Sync + 'static,
     {
-        Self::try_custom(move |tera| {
-            f(tera);
-            Ok(())
-        })
+        Self::try_custom(
+            move |tera| {
+                register(tera);
+                Ok(())
+            },
+            move |tera| {
+                finalize(tera);
+                Ok(())
+            },
+        )
     }
 
     /// Returns a fairing that initializes and maintains templating state.
     ///
-    /// This variant of [`Template::custom()`] allows a fallible `f`. If `f`
-    /// returns an error during initialization, it will cancel the launch. If
-    /// `f` returns an error during template reloading (in debug mode), then the
-    /// newly-reloaded templates are discarded.
+    /// This variant of [`Template::custom()`] allows fallible callbacks. If
+    /// either returns an error during initialization, it will cancel the
+    /// launch. If either returns an error during template reloading (in debug
+    /// mode), then the newly-reloaded templates are discarded.
+    ///
+    /// See [`Template::custom()`] for when each callback runs and what belongs
+    /// in which.
     ///
     /// # Example
     ///
@@ -145,20 +161,30 @@ impl Template {
     /// fn main() {
     ///     rocket::build()
     ///         // ...
-    ///         .attach(Template::try_custom(|tera| {
-    ///             // tera.register_filter ...
-    ///             Ok(())
-    ///         }))
+    ///         .attach(Template::try_custom(
+    ///             |tera| {
+    ///                 // tera.register_filter ...
+    ///                 Ok(())
+    ///             },
+    ///             |tera| {
+    ///                 tera.add_raw_template("greeting.html", "Hello, {{ name }}!")?;
+    ///                 Ok(())
+    ///             },
+    ///         ))
     ///         // ...
     ///     # ;
     /// }
     /// ```
-    pub fn try_custom<F>(f: F) -> impl Fairing
+    pub fn try_custom<R, F>(register: R, finalize: F) -> impl Fairing
     where
+        R: Fn(&mut Tera) -> Result<(), Box<dyn std::error::Error>> + Send + Sync + 'static,
         F: Fn(&mut Tera) -> Result<(), Box<dyn std::error::Error>> + Send + Sync + 'static,
     {
         TemplateFairing {
-            callback: Box::new(f),
+            callbacks: Callbacks {
+                register: Box::new(register),
+                finalize: Box::new(finalize),
+            },
         }
     }
 

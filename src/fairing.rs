@@ -2,18 +2,18 @@ use rocket::fairing::{self, Fairing, Info, Kind};
 use rocket::figment::{Source, value::magic::RelativePathBuf};
 use rocket::{Build, Orbit, Rocket};
 
-use crate::context::{Callback, Context, ContextManager};
+use crate::context::{Callbacks, Context, ContextManager};
 use crate::template::DEFAULT_TEMPLATE_DIR;
 
-/// The TemplateFairing initializes the template system on attach, running
-/// custom_callback after templates have been loaded. In debug mode, the fairing
-/// checks for modifications to templates before every request and reloads them
-/// if necessary.
-pub struct TemplateFairing {
-    /// The user-provided customization callback, allowing the use of
-    /// functionality specific to the template engine. In debug mode,
-    /// this callback might be run multiple times as templates are reloaded.
-    pub callback: Callback,
+/// The TemplateFairing initializes the template system on attach, running the
+/// `register` callback before templates are loaded and the `finalize`
+/// callback after. In debug mode, the fairing checks for modifications to
+/// templates before every request and reloads them if necessary.
+pub(crate) struct TemplateFairing {
+    /// The user-provided customization callbacks, allowing the use of
+    /// functionality specific to the template engine. In debug mode, these
+    /// callbacks might be run multiple times as templates are reloaded.
+    pub(crate) callbacks: Callbacks,
 }
 
 #[rocket::async_trait]
@@ -31,8 +31,8 @@ impl Fairing for TemplateFairing {
 
     /// Initializes the template context. Templates will be searched for in the
     /// `template_dir` config variable or the default ([DEFAULT_TEMPLATE_DIR]).
-    /// The user's callback, if any was supplied, is called to customize the
-    /// template engines. In debug mode, the `ContextManager::new` method
+    /// The user's callbacks, if any were supplied, are called to customize the
+    /// template engine. In debug mode, the `ContextManager::new` method
     /// initializes a directory watcher for auto-reloading of templates.
     async fn on_ignite(&self, rocket: Rocket<Build>) -> fairing::Result {
         let configured_dir = rocket
@@ -49,7 +49,7 @@ impl Fairing for TemplateFairing {
             }
         };
 
-        if let Some(ctxt) = Context::initialize(&path, &self.callback) {
+        if let Some(ctxt) = Context::initialize(&path, &self.callbacks) {
             Ok(rocket.manage(ContextManager::new(ctxt)))
         } else {
             error_!("Template initialization failed. Aborting launch.");
@@ -75,6 +75,6 @@ impl Fairing for TemplateFairing {
             .state::<ContextManager>()
             .expect("Template ContextManager registered in on_ignite");
 
-        cm.reload_if_needed(&self.callback);
+        cm.reload_if_needed(&self.callbacks);
     }
 }

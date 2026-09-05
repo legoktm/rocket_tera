@@ -35,7 +35,7 @@ fn test_hello() {
     let client = Client::tracked(rocket()).unwrap();
     let response = client.get("/hello/Jack%20Daniels").dispatch();
     assert_eq!(response.status(), Status::Ok);
-    assert!(response.into_string().unwrap().contains("Hi Jack Daniels!"));
+    assert!(response.into_string().unwrap().contains("Hi JACK DANIELS!"));
 }
 
 #[test]
