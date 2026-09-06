@@ -38,7 +38,7 @@ This crate is intended to be used with trusted templates that are shipped alongs
 
 # Versions
 
-The 2.x series is the primary release and actively supported.
+The 2.x series uses Tera 2.0 and is the primary release and actively supported.
 
 The 1.x series uses Tera 1.0 and exists primarily to ease migrating to this crate. It will be maintained until the end of 2026 (at least).
 
