@@ -44,4 +44,4 @@ The 1.x series uses Tera 1.0 and exists primarily to ease migrating to this crat
 
 # History
 
-This was originally forked from the `rocket_dyn_templates` crate, which was maintained as part of Rocket upstream.
+This was originally forked from the [`rocket_dyn_templates`](https://api.rocket.rs/v0.5/rocket_dyn_templates/) ([3a54d079aef](https://github.com/rwf2/Rocket/tree/3a54d079aef060a8f732bd04ea54b0581a604087/contrib/dyn_templates)) crate, which was maintained as part of Rocket upstream.
