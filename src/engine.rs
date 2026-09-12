@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::path::PathBuf;
+use std::path::Path;
 
 use rocket::serde::Serialize;
 use tera::{Context, Tera};
@@ -12,15 +12,35 @@ pub(crate) fn init() -> Tera {
     tera
 }
 
-/// Registers every discovered `(path, name)` template file with `tera`.
-pub(crate) fn load(tera: &mut Tera, files: &[(PathBuf, String)]) -> Option<()> {
-    // Register all at once. If we register one at a time, it will complain
-    // about unregistered base templates.
-    let files = files.iter().map(|(path, name)| (path, Some(name.as_str())));
+/// Registers every file in `root` with `tera`, named by its path relative to
+/// `root`. Tera remembers the glob so the templates can be reloaded later.
+pub(crate) fn load(tera: &mut Tera, root: &Path) -> Option<()> {
+    let glob = root.join("**").join("*");
+    let Some(glob) = glob.to_str() else {
+        error_!(
+            "Template directory '{}' is not valid UTF-8.",
+            root.display()
+        );
+        return None;
+    };
 
-    // Finally try to tell Tera about all of the templates.
-    if let Err(e) = tera.add_template_files(files) {
+    if let Err(e) = tera.load_from_glob(glob) {
         error_!("Tera templating initialization failed.");
+        info_!("{}", e);
+        log_error(&e);
+        return None;
+    }
+
+    Some(())
+}
+
+/// Reloads every template previously loaded by [`load()`] from disk. If that
+/// fails, `tera` keeps its existing templates.
+#[cfg(debug_assertions)]
+pub(crate) fn reload(tera: &mut Tera) -> Option<()> {
+    if let Err(e) = tera.full_reload() {
+        error_!("Tera template reloading failed.");
+        info_!("{}", e);
         log_error(&e);
         return None;
     }

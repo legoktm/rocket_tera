@@ -11,8 +11,7 @@ use crate::template::DEFAULT_TEMPLATE_DIR;
 /// if necessary.
 pub(crate) struct TemplateFairing {
     /// The user-provided customization callback, allowing the use of
-    /// functionality specific to the template engine. In debug mode,
-    /// this callback might be run multiple times as templates are reloaded.
+    /// functionality specific to the template engine.
     pub(crate) callback: Callback,
 }
 
@@ -75,6 +74,6 @@ impl Fairing for TemplateFairing {
             .state::<ContextManager>()
             .expect("Template ContextManager registered in on_ignite");
 
-        cm.reload_if_needed(&self.callback);
+        cm.reload_if_needed();
     }
 }

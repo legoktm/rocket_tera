@@ -119,9 +119,7 @@ impl Template {
     /// Returns a fairing that initializes and maintains templating state.
     ///
     /// This variant of [`Template::custom()`] allows a fallible `f`. If `f`
-    /// returns an error during initialization, it will cancel the launch. If
-    /// `f` returns an error during template reloading (in debug mode), then the
-    /// newly-reloaded templates are discarded.
+    /// returns an error during initialization, it will cancel the launch.
     ///
     /// # Example
     ///

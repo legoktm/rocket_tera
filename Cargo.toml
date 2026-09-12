@@ -23,11 +23,10 @@ uninlined_format_args = "deny"
 all = {level = "deny", priority = -1}
 
 [dependencies]
-walkdir = "2.4"
 notify = "8"
 normpath = "1"
 
-tera = "2.3.0"
+tera = { version = "2.3.0", features = ["glob_fs"] }
 
 [features]
 contrib-base64 = ["dep:tera-contrib", "tera-contrib/base64"]

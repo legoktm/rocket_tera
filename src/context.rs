@@ -31,17 +31,6 @@ impl Context {
             }
         };
 
-        let mut files: Vec<(PathBuf, String)> = Vec::new();
-        for entry in walkdir::WalkDir::new(&root).follow_links(true) {
-            let entry = match entry {
-                Ok(entry) if entry.file_type().is_file() => entry,
-                Ok(_) | Err(_) => continue,
-            };
-
-            let name = template_name(&root, entry.path());
-            files.push((entry.into_path(), name));
-        }
-
         let mut tera = engine::init();
         if let Err(reason) = callback(&mut tera) {
             error_!("Template customization callback failed.");
@@ -50,7 +39,7 @@ impl Context {
             return None;
         }
 
-        engine::load(&mut tera, &files)?;
+        engine::load(&mut tera, &root)?;
 
         Some(Context { root, tera })
     }
@@ -88,7 +77,8 @@ mod manager {
 
     use notify::{Error, Event, RecommendedWatcher, RecursiveMode, Watcher, recommended_watcher};
 
-    use super::{Callback, Context};
+    use super::Context;
+    use crate::engine;
 
     /// A filesystem watcher paired with the receive queue for its events.
     type Watched = (RecommendedWatcher, Mutex<Receiver<Result<Event, Error>>>);
@@ -141,9 +131,8 @@ mod manager {
 
         /// Checks whether any template files have changed on disk. If there
         /// have been changes since the last reload, all templates are
-        /// reinitialized from disk and the user's customization callback is run
-        /// again.
-        pub fn reload_if_needed(&self, callback: &Callback) {
+        /// reloaded from disk.
+        pub fn reload_if_needed(&self) {
             let templates_changes = self
                 .watcher
                 .as_ref()
@@ -151,57 +140,12 @@ mod manager {
 
             if let Some(true) = templates_changes {
                 debug!("template change detected: reloading templates");
-                let root = self.context().root.clone();
-                if let Some(new_ctxt) = Context::initialize(&root, callback) {
-                    *self.context_mut() = new_ctxt;
-                } else {
+                if engine::reload(&mut self.context_mut().tera).is_none() {
                     warn!(
                         "error while reloading template\n\
                         existing templates will remain active."
                     )
                 };
-            }
-        }
-    }
-}
-
-/// Returns the name that identifies the template at `path`: its path relative
-/// to `root`.
-fn template_name(root: &Path, path: &Path) -> String {
-    let rel_path = path.strip_prefix(root).unwrap();
-    let mut name = rel_path.to_string_lossy().into_owned();
-
-    // Ensure template name consistency on Windows systems
-    if cfg!(windows) {
-        name = name.replace('\\', "/");
-    }
-
-    name
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn template_path_index_html() {
-        for root in &["/", "/a/b/c/", "/a/b/c/d/", "/a/"] {
-            let path = Path::new(root).join("index.html");
-            let name = template_name(Path::new(root), &path);
-
-            assert_eq!(name, "index.html");
-        }
-    }
-
-    #[test]
-    fn template_path_subdir_index_html() {
-        for root in &["/", "/a/b/c/", "/a/b/c/d/", "/a/"] {
-            for sub in &["a/", "a/b/", "a/b/c/", "a/b/c/d/"] {
-                let path = Path::new(root).join(sub).join("index.html");
-                let name = template_name(Path::new(root), &path);
-
-                let expected_name = format!("{sub}index.html");
-                assert_eq!(name, expected_name.as_str());
             }
         }
     }
