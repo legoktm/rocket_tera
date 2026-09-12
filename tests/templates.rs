@@ -345,11 +345,161 @@ mod tera_tests {
         assert_eq!(response.status(), Status::NotFound);
     }
 
+    #[cfg(debug_assertions)]
+    fn write_file(path: &Path, text: &str) {
+        use std::fs::File;
+        use std::io::Write;
+
+        let mut file = File::create(path).expect("open file");
+        file.write_all(text.as_bytes()).expect("write file");
+        file.sync_all().expect("sync file");
+    }
+
+    /// Creates an empty template directory named `name`, so that a test can
+    /// modify its templates without affecting tests running in parallel.
+    #[cfg(debug_assertions)]
+    fn scratch_template_dir(name: &str) -> PathBuf {
+        let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create template dir");
+        dir
+    }
+
+    /// Returns a client serving the templates in `dir`, or `None` if template
+    /// reloading is unavailable.
+    #[cfg(debug_assertions)]
+    fn reloading_client(dir: &Path) -> Option<rocket::local::blocking::Client> {
+        let rocket = rocket::custom(Config::figment().merge(("template_dir", dir)))
+            .attach(Template::fairing())
+            .mount("/", routes![is_reloading]);
+
+        let client = rocket::local::blocking::Client::debug(rocket).unwrap();
+        let status = client.get("/is_reloading").dispatch().status();
+        (status == Status::Ok).then_some(client)
+    }
+
+    /// Dispatches requests, each of which triggers a template reload if
+    /// needed, until `name` renders as `expected`. Gives up after 1.5s.
+    #[cfg(debug_assertions)]
+    fn wait_for_render(
+        client: &rocket::local::blocking::Client,
+        name: &'static str,
+        expected: &str,
+    ) -> bool {
+        for _ in 0..6 {
+            client.get("/").dispatch();
+            let rendered = Template::show(client.rocket(), name, context! {});
+            if rendered.as_deref() == Some(expected) {
+                return true;
+            }
+
+            std::thread::sleep(std::time::Duration::from_millis(250));
+        }
+
+        false
+    }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    fn test_template_reload_new_file() {
+        let dir = scratch_template_dir("reload_new_file");
+        write_file(&dir.join("existing.txt"), "existing");
+        let Some(client) = reloading_client(&dir) else {
+            return;
+        };
+
+        assert_eq!(
+            Template::show(client.rocket(), "new.txt", context! {}),
+            None
+        );
+
+        write_file(&dir.join("new.txt"), "new");
+        assert!(
+            wait_for_render(&client, "new.txt", "new"),
+            "failed to load new template in 1.5s"
+        );
+        assert_eq!(
+            Template::show(client.rocket(), "existing.txt", context! {}),
+            Some("existing".into())
+        );
+    }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    fn test_template_reload_broken_edit() {
+        let dir = scratch_template_dir("reload_broken_edit");
+        let page_path = dir.join("page.txt");
+        write_file(&page_path, "initial");
+        let Some(client) = reloading_client(&dir) else {
+            return;
+        };
+
+        // Break an existing template and add a valid new one. The reload fails
+        // as a whole, so neither change is picked up.
+        write_file(&page_path, "{{ broken");
+        write_file(&dir.join("new.txt"), "new");
+        assert!(
+            !wait_for_render(&client, "new.txt", "new"),
+            "loaded new template despite a broken template"
+        );
+        assert_eq!(
+            Template::show(client.rocket(), "page.txt", context! {}),
+            Some("initial".into())
+        );
+
+        // Once the template is fixed, both changes are picked up.
+        write_file(&page_path, "fixed");
+        assert!(
+            wait_for_render(&client, "page.txt", "fixed"),
+            "failed to reload fixed template in 1.5s"
+        );
+        assert_eq!(
+            Template::show(client.rocket(), "new.txt", context! {}),
+            Some("new".into())
+        );
+    }
+
+    /// Reloading reads every template, which the watcher may report as access
+    /// events (inotify does since notify v7). Those must not trigger another
+    /// reload, or templates are reloaded on every request.
+    #[test]
+    #[cfg(all(debug_assertions, unix))]
+    fn test_template_reload_ignores_own_reads() {
+        let dir = scratch_template_dir("reload_ignores_own_reads");
+        let outside = scratch_template_dir("reload_ignores_own_reads_outside");
+
+        // Changes to a symlink's target outside the template directory aren't
+        // reported by the watcher, but are picked up by any reload. This makes
+        // a reload visible even when nothing in the template directory changed.
+        let target_path = outside.join("target.txt");
+        write_file(&target_path, "initial");
+        std::os::unix::fs::symlink(&target_path, dir.join("link.txt")).expect("symlink");
+
+        let trigger_path = dir.join("trigger.txt");
+        write_file(&trigger_path, "initial");
+        let Some(client) = reloading_client(&dir) else {
+            return;
+        };
+
+        // Cause one legitimate reload, which reads every template.
+        write_file(&trigger_path, "changed");
+        assert!(
+            wait_for_render(&client, "trigger.txt", "changed"),
+            "failed to reload modified template in 1.5s"
+        );
+
+        // Nothing in the template directory changes from here on, so no further
+        // requests should reload templates.
+        write_file(&target_path, "changed");
+        assert!(
+            !wait_for_render(&client, "link.txt", "changed"),
+            "templates were reloaded without any changes"
+        );
+    }
+
     #[test]
     #[cfg(debug_assertions)]
     fn test_template_reload() {
-        use std::fs::File;
-        use std::io::Write;
         use std::time::Duration;
 
         use rocket::local::blocking::Client;
@@ -357,12 +507,6 @@ mod tera_tests {
         const RELOAD_TEMPLATE: &str = "reload.txt";
         const INITIAL_TEXT: &str = "initial";
         const NEW_TEXT: &str = "reload";
-
-        fn write_file(path: &Path, text: &str) {
-            let mut file = File::create(path).expect("open file");
-            file.write_all(text.as_bytes()).expect("write file");
-            file.sync_all().expect("sync file");
-        }
 
         // set up the template before initializing the Rocket instance so
         // that it will be picked up in the initial loading of templates.

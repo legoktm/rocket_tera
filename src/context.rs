@@ -133,10 +133,19 @@ mod manager {
         /// have been changes since the last reload, all templates are
         /// reloaded from disk.
         pub fn reload_if_needed(&self) {
-            let templates_changes = self
-                .watcher
-                .as_ref()
-                .map(|(_, rx)| rx.lock().expect("fsevents lock").try_iter().count() > 0);
+            // Access events don't change templates, and reloading generates
+            // them by reading every template, so ignore them to avoid reloading
+            // on every request. Since notify v7, inotify always reports opens.
+            // TODO: use `Config::with_event_kinds(EventKindMask::CORE)` once
+            // notify v9 is released, so these events aren't watched at all.
+            let templates_changes = self.watcher.as_ref().map(|(_, rx)| {
+                rx.lock()
+                    .expect("fsevents lock")
+                    .try_iter()
+                    .filter(|event| !event.as_ref().is_ok_and(|e| e.kind.is_access()))
+                    .count()
+                    > 0
+            });
 
             if let Some(true) = templates_changes {
                 debug!("template change detected: reloading templates");
