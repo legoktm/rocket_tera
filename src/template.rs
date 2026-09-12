@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::path::PathBuf;
+use std::path::Path;
 
 use rocket::fairing::Fairing;
 use rocket::figment::{error::Error, value::Value};
@@ -27,14 +27,6 @@ pub(crate) const DEFAULT_TEMPLATE_DIR: &str = "templates";
 pub struct Template {
     name: Cow<'static, str>,
     value: Result<Value, Error>,
-}
-
-#[derive(Debug)]
-pub(crate) struct TemplateInfo {
-    /// The complete path, including `template_dir`, to this template, if any.
-    pub(crate) path: Option<PathBuf>,
-    /// The Content-Type derived from the template's extension, if any.
-    pub(crate) data_type: ContentType,
 }
 
 impl Template {
@@ -296,14 +288,14 @@ impl Template {
     #[inline(always)]
     pub(crate) fn finalize(self, ctxt: &Context) -> Result<(ContentType, String), Status> {
         let template = &*self.name;
-        let info = ctxt.templates.get(template).ok_or_else(|| {
-            let ts: Vec<_> = ctxt.templates.keys().map(|s| s.as_str()).collect();
+        if !ctxt.tera.contains_template(template) {
+            let ts: Vec<_> = ctxt.tera.get_template_names().collect();
             error_!("Template '{}' does not exist.", template);
             info_!("Known templates: {}.", ts.join(", "));
             info_!("Searched in {:?}.", ctxt.root);
 
-            Status::InternalServerError
-        })?;
+            return Err(Status::InternalServerError);
+        }
 
         let value = self.value.map_err(|e| {
             error_!("Template context failed to serialize: {}.", e);
@@ -315,7 +307,14 @@ impl Template {
             Status::InternalServerError
         })?;
 
-        Ok((info.data_type.clone(), string))
+        // The Content-Type is derived from the template's extension, if any.
+        let data_type = Path::new(template)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .and_then(ContentType::from_extension)
+            .unwrap_or(ContentType::Text);
+
+        Ok((data_type, string))
     }
 }
 

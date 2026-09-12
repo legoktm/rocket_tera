@@ -1,10 +1,8 @@
-use std::collections::HashMap;
 use std::error::Error;
+use std::path::PathBuf;
 
 use rocket::serde::Serialize;
 use tera::{Context, Tera};
-
-use crate::template::TemplateInfo;
 
 /// Initializes `Tera` instance.
 pub(crate) fn init() -> Tera {
@@ -14,13 +12,11 @@ pub(crate) fn init() -> Tera {
     tera
 }
 
-/// Registers every discovered template with `tera`.
-pub(crate) fn load(tera: &mut Tera, templates: &HashMap<String, TemplateInfo>) -> Option<()> {
-    // Collect into a tuple of (path, name) for Tera. If we register one at
-    // a time, it will complain about unregistered base templates.
-    let files = templates
-        .iter()
-        .filter_map(|(name, info)| Some((info.path.as_ref()?, Some(name.as_str()))));
+/// Registers every discovered `(path, name)` template file with `tera`.
+pub(crate) fn load(tera: &mut Tera, files: &[(PathBuf, String)]) -> Option<()> {
+    // Register all at once. If we register one at a time, it will complain
+    // about unregistered base templates.
+    let files = files.iter().map(|(path, name)| (path, Some(name.as_str())));
 
     // Finally try to tell Tera about all of the templates.
     if let Err(e) = tera.add_template_files(files) {

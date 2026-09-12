@@ -59,7 +59,7 @@ impl Metadata<'_> {
     /// }
     /// ```
     pub fn contains_template(&self, name: &str) -> bool {
-        self.0.context().templates.contains_key(name)
+        self.0.context().tera.contains_template(name)
     }
 
     /// Returns `true` if template reloading is enabled.
@@ -130,7 +130,9 @@ impl Metadata<'_> {
 
 impl fmt::Debug for Metadata<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_map().entries(&self.0.context().templates).finish()
+        f.debug_list()
+            .entries(self.0.context().tera.get_template_names())
+            .finish()
     }
 }
 

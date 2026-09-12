@@ -1,12 +1,9 @@
-use std::collections::HashMap;
 use std::error::Error;
 use std::path::{Path, PathBuf};
 
 use crate::engine;
-use crate::template::TemplateInfo;
 
 use normpath::PathExt;
-use rocket::http::ContentType;
 use tera::Tera;
 
 pub(crate) type Callback =
@@ -21,8 +18,6 @@ pub(crate) struct Callbacks {
 pub(crate) struct Context {
     /// The root of the template directory.
     pub root: PathBuf,
-    /// Mapping from template name to its information.
-    pub templates: HashMap<String, TemplateInfo>,
     /// The initialized templating engine.
     pub tera: Tera,
 }
@@ -42,42 +37,15 @@ impl Context {
             }
         };
 
-        let mut templates: HashMap<String, TemplateInfo> = HashMap::new();
+        let mut files: Vec<(PathBuf, String)> = Vec::new();
         for entry in walkdir::WalkDir::new(&root).follow_links(true) {
             let entry = match entry {
                 Ok(entry) if entry.file_type().is_file() => entry,
                 Ok(_) | Err(_) => continue,
             };
 
-            let (template, data_type_str) = split_path(&root, entry.path());
-            if let Some(info) = templates.get(&*template) {
-                warn_!(
-                    "Template name '{}' does not have a unique source.",
-                    template
-                );
-                match info.path {
-                    Some(ref path) => info_!("Existing path: {:?}", path),
-                    None => info_!("Existing Content-Type: {}", info.data_type),
-                }
-
-                info_!("Additional path: {:?}", entry.path());
-                warn_!("Keeping existing template '{}'.", template);
-
-                continue;
-            }
-
-            let data_type = data_type_str
-                .as_ref()
-                .and_then(|ext| ContentType::from_extension(ext))
-                .unwrap_or(ContentType::Text);
-
-            templates.insert(
-                template,
-                TemplateInfo {
-                    path: Some(entry.into_path()),
-                    data_type,
-                },
-            );
+            let name = template_name(&root, entry.path());
+            files.push((entry.into_path(), name));
         }
 
         // We load in 3 stages:
@@ -86,30 +54,10 @@ impl Context {
         // 3) user-specified finalization, which could be loading other templates
         let mut tera = engine::init();
         run(&callbacks.register, &mut tera, "register")?;
-        engine::load(&mut tera, &templates)?;
+        engine::load(&mut tera, &files)?;
         run(&callbacks.finalize, &mut tera, "finalize")?;
 
-        for name in tera.get_template_names() {
-            if !templates.contains_key(name) {
-                let data_type = Path::new(name)
-                    .extension()
-                    .and_then(|osstr| osstr.to_str())
-                    .and_then(ContentType::from_extension)
-                    .unwrap_or(ContentType::Text);
-
-                let info = TemplateInfo {
-                    path: None,
-                    data_type,
-                };
-                templates.insert(name.to_string(), info);
-            }
-        }
-
-        Some(Context {
-            root,
-            templates,
-            tera,
-        })
+        Some(Context { root, tera })
     }
 }
 
@@ -235,11 +183,10 @@ mod manager {
     }
 }
 
-/// Splits a path into a name that may be used to identify the template, and the
-/// template's data type, if any.
-fn split_path(root: &Path, path: &Path) -> (String, Option<String>) {
-    let rel_path = path.strip_prefix(root).unwrap().to_path_buf();
-    let data_type = rel_path.extension();
+/// Returns the name that identifies the template at `path`: its path relative
+/// to `root`.
+fn template_name(root: &Path, path: &Path) -> String {
+    let rel_path = path.strip_prefix(root).unwrap();
     let mut name = rel_path.to_string_lossy().into_owned();
 
     // Ensure template name consistency on Windows systems
@@ -247,7 +194,7 @@ fn split_path(root: &Path, path: &Path) -> (String, Option<String>) {
         name = name.replace('\\', "/");
     }
 
-    (name, data_type.map(|d| d.to_string_lossy().into_owned()))
+    name
 }
 
 #[cfg(test)]
@@ -258,10 +205,9 @@ mod tests {
     fn template_path_index_html() {
         for root in &["/", "/a/b/c/", "/a/b/c/d/", "/a/"] {
             let path = Path::new(root).join("index.html");
-            let (name, data_type) = split_path(Path::new(root), &path);
+            let name = template_name(Path::new(root), &path);
 
             assert_eq!(name, "index.html");
-            assert_eq!(data_type, Some("html".into()));
         }
     }
 
@@ -270,11 +216,10 @@ mod tests {
         for root in &["/", "/a/b/c/", "/a/b/c/d/", "/a/"] {
             for sub in &["a/", "a/b/", "a/b/c/", "a/b/c/d/"] {
                 let path = Path::new(root).join(sub).join("index.html");
-                let (name, data_type) = split_path(Path::new(root), &path);
+                let name = template_name(Path::new(root), &path);
 
                 let expected_name = format!("{sub}index.html");
                 assert_eq!(name, expected_name.as_str());
-                assert_eq!(data_type, Some("html".into()));
             }
         }
     }
