@@ -32,13 +32,10 @@ fn template_root() -> PathBuf {
 fn render<C: Serialize>(body: &str, context: C) -> String {
     let body = body.to_string();
     let rocket = rocket::custom(Config::figment().merge(("template_dir", template_root()))).attach(
-        Template::custom(
-            |_| {},
-            move |tera| {
-                tera.add_raw_template("contrib.txt", &body)
-                    .expect("valid Tera template");
-            },
-        ),
+        Template::custom(move |tera| {
+            tera.add_raw_template("contrib.txt", &body)
+                .expect("valid Tera template");
+        }),
     );
 
     let client = Client::debug(rocket).expect("launch succeeds");
@@ -163,7 +160,7 @@ fn test_urlencode() {
     assert_eq!(render("{{ value | urlencode_strict }}", &ctx), "a%20b%2Fc");
 }
 
-/// A `contrib-*` name is registered before the `register` callback runs, so an
+/// A `contrib-*` name is registered before the customization callback runs, so an
 /// application can still replace it.
 #[test]
 #[cfg(feature = "contrib-slug")]
@@ -175,13 +172,11 @@ fn test_contrib_name_can_be_overridden() {
     }
 
     let rocket = rocket::custom(Config::figment().merge(("template_dir", template_root()))).attach(
-        Template::custom(
-            |tera| tera.register_filter("slug", slug),
-            |tera| {
-                tera.add_raw_template("override.txt", "{{ value | slug }}")
-                    .expect("valid Tera template");
-            },
-        ),
+        Template::custom(|tera| {
+            tera.register_filter("slug", slug);
+            tera.add_raw_template("override.txt", "{{ value | slug }}")
+                .expect("valid Tera template");
+        }),
     );
 
     let client = Client::debug(rocket).expect("launch succeeds");

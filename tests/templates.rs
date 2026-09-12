@@ -45,19 +45,10 @@ fn assert_templating_fairing_failed(rocket: Rocket<Build>) {
 }
 
 #[test]
-fn test_register_callback_error() {
-    assert_templating_fairing_failed(rocket::build().attach(Template::try_custom(
-        |_| Err("error registering with Tera!".into()),
-        |_| Ok(()),
-    )));
-}
-
-#[test]
-fn test_finalize_callback_error() {
-    assert_templating_fairing_failed(rocket::build().attach(Template::try_custom(
-        |_| Ok(()),
-        |_| Err("error finalizing templates!".into()),
-    )));
+fn test_callback_error() {
+    assert_templating_fairing_failed(
+        rocket::build().attach(Template::try_custom(|_| Err("error with Tera!".into()))),
+    );
 }
 
 /// A custom filter, registered by the callback ordering tests below.
@@ -90,16 +81,11 @@ fn order_rocket() -> Rocket<Build> {
 fn test_callback_ordering() {
     use rocket::local::blocking::Client;
 
-    // `register` runs first, so its filter is known by the time the template
-    // using it is loaded; `finalize` runs last, so it can extend a template
-    // that was loaded from disk.
-    let rocket = order_rocket().attach(Template::try_custom(
-        |tera| {
-            tera.register_filter("shout", shout);
-            Ok(())
-        },
-        add_extending_template,
-    ));
+    // The callback runs first, so its filter is known by the time the template
+    // using it is loaded.
+    let rocket = order_rocket().attach(Template::custom(|tera| {
+        tera.register_filter("shout", shout);
+    }));
 
     let client = Client::debug(rocket).expect("launch succeeds");
     let ctx = context! { value: "hi" };
@@ -107,28 +93,14 @@ fn test_callback_ordering() {
         Template::show(client.rocket(), "filtered.txt", &ctx),
         Some("HI".into())
     );
-    assert_eq!(
-        Template::show(client.rocket(), "extends.txt", &ctx),
-        Some("[hi]\n".into())
-    );
-}
-
-#[test]
-fn test_filter_registered_too_late() {
-    // Registering the filter in `finalize` is too late: Tera validates the
-    // filters a template names while loading it, which happens first.
-    assert_templating_fairing_failed(order_rocket().attach(Template::custom(
-        |_| {},
-        |tera| tera.register_filter("shout", shout),
-    )));
 }
 
 #[test]
 fn test_extending_too_early() {
-    // Conversely, extending `base.txt` in `register` is too early: nothing
+    // Conversely, extending `base.txt` in the callback is too early: nothing
     // has been loaded from disk yet.
     assert_templating_fairing_failed(
-        order_rocket().attach(Template::try_custom(add_extending_template, |_| Ok(()))),
+        order_rocket().attach(Template::try_custom(add_extending_template)),
     );
 }
 

@@ -5,11 +5,7 @@ The main change in this release is upgrading to [`tera 2.0`](https://keats.githu
 Filters, functions and tests that relied on other dependencies were moved into a separate `tera-contrib` crate. You will need to enable the corresponding `contrib-{name}` feature in this crate to be able to use
 that functionality again.
 
-Tera also changes the initalization order, which required changes to `Template::custom()` and `try_custom()`. Filters, functions, etc. must be registered before templates, so `custom()` now takes two callbacks: `register` and `finalize`. The loading order is:
-
-1) `register` callback, for filters, functions, etc.
-2) loading all templates in `template_dir`.
-3) `finalize` callback, if you want to add any more templates.
+Tera also changes the initalization order, which may require changes to `Template::custom()` and `try_custom()`. Filters, functions, etc. must be registered before templates, so the callback you provide must not rely on any templates (which have not yet been loaded).
 
 # `rocket_dyn_templates` 0.2 to `rocket_tera` 1.0
 

@@ -10,7 +10,7 @@ use rocket::serde::Serialize;
 use rocket::{Ignite, Orbit, Rocket, Sentinel};
 use tera::Tera;
 
-use crate::context::{Callbacks, Context, ContextManager};
+use crate::context::{Context, ContextManager};
 use crate::engine;
 use crate::fairing::TemplateFairing;
 
@@ -61,20 +61,15 @@ impl Template {
     /// }
     /// ```
     pub fn fairing() -> impl Fairing {
-        Template::custom(|_| {}, |_| {})
+        Template::custom(|_| {})
     }
 
     /// Returns a fairing that initializes and maintains templating state.
     ///
     /// Unlike [`Template::fairing()`], this method allows you to configure the
-    /// [`Tera`] instance, via `register` before the templates in
-    /// `template_dir` are loaded and via `finalize` after:
+    /// [`Tera`] instance via the function `f`.
     ///
-    ///   1. `register` to add filters, functions, and tests
-    ///   2. then the templates in `template_dir` are loaded,
-    ///   3. `finalize` allows adding additional templates
-    ///
-    /// This method does not allow the callbacks to fail. If either is fallible,
+    /// This method does not allow the function `f` to fail. If `f` is fallible,
     /// use [`Template::try_custom()`] instead.
     ///
     /// Calling methods on [`Tera`] may require importing types from the `tera`
@@ -99,13 +94,9 @@ impl Template {
     /// fn main() {
     ///     rocket::build()
     ///         // ...
-    ///         .attach(Template::custom(
-    ///             |tera| tera.register_filter("shout", shout),
-    ///             |tera| {
-    ///                 tera.add_raw_template("greeting.html", "{{ name | shout }}")
-    ///                     .expect("valid Tera template");
-    ///             },
-    ///         ))
+    ///         .attach(Template::custom(|tera| {
+    ///             tera.register_filter("shout", shout);
+    ///         }))
     ///         // ...
     ///     # ;
     /// }
@@ -115,32 +106,22 @@ impl Template {
     /// [`rocket_tera::tera`]: crate::tera
     /// [`tera::Kwargs`]: crate::tera::Kwargs
     /// [`tera::State`]: crate::tera::State
-    pub fn custom<R, F>(register: R, finalize: F) -> impl Fairing
+    pub fn custom<F>(f: F) -> impl Fairing
     where
-        R: Fn(&mut Tera) + Send + Sync + 'static,
         F: Fn(&mut Tera) + Send + Sync + 'static,
     {
-        Self::try_custom(
-            move |tera| {
-                register(tera);
-                Ok(())
-            },
-            move |tera| {
-                finalize(tera);
-                Ok(())
-            },
-        )
+        Self::try_custom(move |tera| {
+            f(tera);
+            Ok(())
+        })
     }
 
     /// Returns a fairing that initializes and maintains templating state.
     ///
-    /// This variant of [`Template::custom()`] allows fallible callbacks. If
-    /// either returns an error during initialization, it will cancel the
-    /// launch. If either returns an error during template reloading (in debug
-    /// mode), then the newly-reloaded templates are discarded.
-    ///
-    /// See [`Template::custom()`] for when each callback runs and what belongs
-    /// in which.
+    /// This variant of [`Template::custom()`] allows a fallible `f`. If `f`
+    /// returns an error during initialization, it will cancel the launch. If
+    /// `f` returns an error during template reloading (in debug mode), then the
+    /// newly-reloaded templates are discarded.
     ///
     /// # Example
     ///
@@ -153,30 +134,20 @@ impl Template {
     /// fn main() {
     ///     rocket::build()
     ///         // ...
-    ///         .attach(Template::try_custom(
-    ///             |tera| {
-    ///                 // tera.register_filter ...
-    ///                 Ok(())
-    ///             },
-    ///             |tera| {
-    ///                 tera.add_raw_template("greeting.html", "Hello, {{ name }}!")?;
-    ///                 Ok(())
-    ///             },
-    ///         ))
+    ///         .attach(Template::try_custom(|tera| {
+    ///             // tera.register_filter ...
+    ///             Ok(())
+    ///         }))
     ///         // ...
     ///     # ;
     /// }
     /// ```
-    pub fn try_custom<R, F>(register: R, finalize: F) -> impl Fairing
+    pub fn try_custom<F>(f: F) -> impl Fairing
     where
-        R: Fn(&mut Tera) -> Result<(), Box<dyn std::error::Error>> + Send + Sync + 'static,
         F: Fn(&mut Tera) -> Result<(), Box<dyn std::error::Error>> + Send + Sync + 'static,
     {
         TemplateFairing {
-            callbacks: Callbacks {
-                register: Box::new(register),
-                finalize: Box::new(finalize),
-            },
+            callback: Box::new(f),
         }
     }
 

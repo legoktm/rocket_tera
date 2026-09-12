@@ -14,7 +14,7 @@ use tera::Tera;
 
 /// Registers everything provided by the enabled `contrib-*` features.
 ///
-/// This runs before the `register` callback given to
+/// This runs before the callback given to
 /// [`Template::custom()`](crate::Template::custom()), so a name registered
 /// here can be replaced by registering it again there.
 pub(crate) fn register(#[allow(unused_variables)] tera: &mut Tera) {

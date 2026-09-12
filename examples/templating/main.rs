@@ -6,7 +6,7 @@ mod tests;
 
 use rocket::Request;
 use rocket::response::Redirect;
-use rocket_tera::tera::{Kwargs, State, Tera};
+use rocket_tera::tera::{Kwargs, State};
 use rocket_tera::{Template, context};
 
 /// Templates live next to this example, not in the current working directory,
@@ -41,28 +41,9 @@ fn not_found(req: &Request<'_>) -> Template {
 }
 
 /// A custom filter, used by `index.html`. Filters must be registered before
-/// the templates that use them are loaded, so this runs in `register`.
+/// the templates that use them are loaded, which `Template::custom()` ensures.
 fn shout(value: &str, _: Kwargs, _: &State) -> String {
     value.to_uppercase()
-}
-
-/// Templates need not come from disk: this one is registered at startup, and is
-/// re-registered on every reload in debug mode. It runs in `finalize` so that
-/// `base.html`, loaded from disk, is already available to extend.
-fn add_about_page(tera: &mut Tera) {
-    tera.add_raw_template(
-        "about.html",
-        r#"
-        {% extends "base.html" %}
-
-        {% block content %}
-            <section id="about">
-              <h1>About - Here's another page!</h1>
-            </section>
-        {% endblock content %}
-    "#,
-    )
-    .expect("valid Tera template");
 }
 
 #[launch]
@@ -72,8 +53,7 @@ fn rocket() -> _ {
     rocket::custom(figment)
         .mount("/", routes![index, hello, about])
         .register("/", catchers![not_found])
-        .attach(Template::custom(
-            |tera| tera.register_filter("shout", shout),
-            add_about_page,
-        ))
+        .attach(Template::custom(|tera| {
+            tera.register_filter("shout", shout);
+        }))
 }

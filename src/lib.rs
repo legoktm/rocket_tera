@@ -140,36 +140,8 @@
 //! not valid Tera templates will abort the launch, so keep non-template assets
 //! out of `template_dir`.
 //!
-//! [`Template::custom()`] takes two callbacks, which run on either side of
-//! template loading:
-//!
-//!   1. `register` to add filters, functions, and tests
-//!   2. then the templates in `template_dir` are loaded,
-//!   3. `finalize` allows adding additional templates
-//!
 //! _**Note:** Templates that are registered directly via [`Template::custom()`]
 //! use whatever name was provided during that registration._
-//!
-//! ```rust
-//! # #[macro_use] extern crate rocket;
-//! use rocket_tera::Template;
-//! use rocket_tera::tera::{Kwargs, State};
-//!
-//! fn shout(value: &str, _: Kwargs, _: &State) -> String {
-//!     value.to_uppercase()
-//! }
-//!
-//! #[launch]
-//! fn rocket() -> _ {
-//!     rocket::build().attach(Template::custom(
-//!         |tera| tera.register_filter("shout", shout),
-//!         |tera| {
-//!             tera.add_raw_template("greeting.html", "{{ name | shout }}")
-//!                 .expect("valid Tera template");
-//!         },
-//!     ))
-//! }
-//! ```
 //!
 //! In debug mode (without the `--release` flag passed to `cargo`), templates
 //! are **automatically reloaded** from disk when changes are made. In release
