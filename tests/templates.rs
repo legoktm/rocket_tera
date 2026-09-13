@@ -497,6 +497,36 @@ mod tera_tests {
         );
     }
 
+    /// Dot-files, such as Vim swap files, aren't templates. They must not be
+    /// loaded, or one that isn't valid UTF-8 breaks loading and reloading.
+    #[test]
+    #[cfg(debug_assertions)]
+    fn test_template_reload_ignores_dotfiles() {
+        let dir = scratch_template_dir("reload_ignores_dotfiles");
+        let page_path = dir.join("page.txt");
+        write_file(&page_path, "initial");
+        write_file(&dir.join(".gitkeep"), "");
+        std::fs::write(dir.join(".page.txt.swp"), [0xb0, 0xff, 0xfe]).expect("write swap file");
+        let Some(client) = reloading_client(&dir) else {
+            return;
+        };
+
+        assert_eq!(
+            Template::show(client.rocket(), "page.txt", context! {}),
+            Some("initial".into())
+        );
+        assert_eq!(
+            Template::show(client.rocket(), ".gitkeep", context! {}),
+            None
+        );
+
+        write_file(&page_path, "changed");
+        assert!(
+            wait_for_render(&client, "page.txt", "changed"),
+            "failed to reload modified template in 1.5s"
+        );
+    }
+
     #[test]
     #[cfg(debug_assertions)]
     fn test_template_reload() {

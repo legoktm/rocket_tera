@@ -14,8 +14,12 @@ pub(crate) fn init() -> Tera {
 
 /// Registers every file in `root` with `tera`, named by its path relative to
 /// `root`. Tera remembers the glob so the templates can be reloaded later.
+///
+/// Files whose names start with a dot, such as `.gitkeep` or Vim swap files,
+/// are skipped. They aren't templates, and one that isn't valid UTF-8 would
+/// fail the whole load.
 pub(crate) fn load(tera: &mut Tera, root: &Path) -> Option<()> {
-    let glob = root.join("**").join("*");
+    let glob = root.join("**").join("[!.]*");
     let Some(glob) = glob.to_str() else {
         error_!(
             "Template directory '{}' is not valid UTF-8.",
