@@ -52,12 +52,8 @@ pub(crate) fn reload(tera: &mut Tera) -> Option<()> {
     Some(())
 }
 
+/// Renders `template`, which the caller must have checked exists.
 pub(crate) fn render<C: Serialize>(tera: &Tera, template: &str, context: C) -> Option<String> {
-    if !tera.contains_template(template) {
-        error_!("Tera template '{}' does not exist.", template);
-        return None;
-    };
-
     let tera_ctx = Context::from_serialize(&context)
         .map_err(|e| error_!("Tera context error: {}.", e))
         .ok()?;
