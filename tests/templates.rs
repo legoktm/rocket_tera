@@ -500,48 +500,22 @@ mod tera_tests {
     #[test]
     #[cfg(debug_assertions)]
     fn test_template_reload() {
-        use std::time::Duration;
-
-        use rocket::local::blocking::Client;
-
-        const RELOAD_TEMPLATE: &str = "reload.txt";
-        const INITIAL_TEXT: &str = "initial";
-        const NEW_TEXT: &str = "reload";
-
-        // set up the template before initializing the Rocket instance so
-        // that it will be picked up in the initial loading of templates.
-        let reload_path = template_root().join("reload.txt");
-        write_file(&reload_path, INITIAL_TEXT);
-
-        // set up the client. if we can't reload templates, then just quit
-        let client = Client::debug(rocket()).unwrap();
-        let res = client.get("/is_reloading").dispatch();
-        if res.status() != Status::Ok {
+        let dir = scratch_template_dir("reload");
+        let reload_path = dir.join("reload.txt");
+        write_file(&reload_path, "initial");
+        let Some(client) = reloading_client(&dir) else {
             return;
-        }
+        };
 
-        // verify that the initial content is correct
-        let initial_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, context! {});
-        assert_eq!(initial_rendered, Some(INITIAL_TEXT.into()));
+        assert_eq!(
+            Template::show(client.rocket(), "reload.txt", context! {}),
+            Some("initial".into())
+        );
 
-        // write a change to the file
-        write_file(&reload_path, NEW_TEXT);
-
-        for _ in 0..6 {
-            // dispatch any request to trigger a template reload
-            client.get("/").dispatch();
-
-            // if the new content is correct, we are done
-            let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, context! {});
-            if new_rendered == Some(NEW_TEXT.into()) {
-                write_file(&reload_path, INITIAL_TEXT);
-                return;
-            }
-
-            // otherwise, retry a few times, waiting 250ms in between
-            std::thread::sleep(Duration::from_millis(250));
-        }
-
-        panic!("failed to reload modified template in 1.5s");
+        write_file(&reload_path, "reload");
+        assert!(
+            wait_for_render(&client, "reload.txt", "reload"),
+            "failed to reload modified template in 1.5s"
+        );
     }
 }
