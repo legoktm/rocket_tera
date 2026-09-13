@@ -58,14 +58,24 @@ jobs:
         run: cargo +nightly doc --no-deps --all-features
 
   test:
-    name: ${{ matrix.toolchain }}
-    runs-on: ubuntu-latest
+    name: ${{ matrix.toolchain }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         toolchain: [msrv, stable, nightly]
+        os: [ubuntu-latest]
+        # Template reloading and path handling are platform-specific.
+        include:
+          - toolchain: stable
+            os: macos-latest
+          - toolchain: stable
+            os: windows-latest
     # Nightly tracks unreleased changes; let it report without failing the build.
     continue-on-error: ${{ matrix.toolchain == 'nightly' }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -73,7 +83,6 @@ jobs:
 
       - name: Resolve toolchain
         id: resolve
-        shell: bash
         run: |
           if [ "${MATRIX_TOOLCHAIN}" = "msrv" ]; then
             # Read `rust-version` from Cargo.toml rather than duplicating it here.
