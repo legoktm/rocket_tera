@@ -273,6 +273,12 @@ mod tera_tests {
     const UNESCAPED_EXPECTED: &str = "\nh_start\ntitle: _test_\nh_end\n\n\n<script />\n\nfoot";
     const ESCAPED_EXPECTED: &str = "\nh_start\ntitle: _test_\nh_end\n\n\n&lt;script /&gt;\n\nfoot";
 
+    /// Converts CRLF line endings to LF, since Git on Windows may check the
+    /// template fixtures out with CRLF.
+    fn normalize_line_endings(content: String) -> String {
+        content.replace("\r\n", "\n")
+    }
+
     #[async_test]
     async fn test_tera_templates() {
         use rocket::local::asynchronous::Client;
@@ -284,10 +290,16 @@ mod tera_tests {
         let mut map = HashMap::new();
         map.insert("title", "_test_");
         map.insert("content", "<script />");
+        let show = |name| Template::show(client.rocket(), name, &map).map(normalize_line_endings);
+        let md_render = |name| {
+            metadata
+                .render(name, &map)
+                .map(|(ct, s)| (ct, normalize_line_endings(s)))
+        };
 
         // Test with a txt file, which shouldn't escape.
-        let template = Template::show(client.rocket(), "txt_test.txt", &map);
-        let md_rendered = metadata.render("txt_test.txt", &map);
+        let template = show("txt_test.txt");
+        let md_rendered = md_render("txt_test.txt");
         assert_eq!(template, Some(UNESCAPED_EXPECTED.into()));
         assert_eq!(
             md_rendered,
@@ -295,8 +307,8 @@ mod tera_tests {
         );
 
         // Now with an HTML file, which should escape.
-        let template = Template::show(client.rocket(), "html_test.html", &map);
-        let md_rendered = metadata.render("html_test.html", &map);
+        let template = show("html_test.html");
+        let md_rendered = md_render("html_test.html");
         assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
         assert_eq!(
             md_rendered,
