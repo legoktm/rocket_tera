@@ -6,6 +6,7 @@ use rocket::request::{self, FromRequest};
 use rocket::serde::Serialize;
 use rocket::{Ignite, Request, Rocket, Sentinel};
 
+use crate::template::log_missing_fairing;
 use crate::{Template, context::ContextManager};
 
 /// Request guard for dynamically querying template metadata.
@@ -139,11 +140,7 @@ impl fmt::Debug for Metadata<'_> {
 impl Sentinel for Metadata<'_> {
     fn abort(rocket: &Rocket<Ignite>) -> bool {
         if rocket.state::<ContextManager>().is_none() {
-            error!(
-                "uninitialized template context: missing `Template::fairing()`.\n\
-                To use templates, you must attach `Template::fairing()`."
-            );
-
+            log_missing_fairing();
             return true;
         }
 
@@ -164,11 +161,7 @@ impl<'r> FromRequest<'r> for Metadata<'r> {
             .state::<ContextManager>()
             .map(|cm| request::Outcome::Success(Metadata(cm)))
             .unwrap_or_else(|| {
-                error!(
-                    "uninitialized template context: missing `Template::fairing()`.\n\
-                    To use templates, you must attach `Template::fairing()`."
-                );
-
+                log_missing_fairing();
                 request::Outcome::Error((Status::InternalServerError, ()))
             })
     }

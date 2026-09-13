@@ -103,10 +103,8 @@ mod manager {
             let watcher = match watcher {
                 Ok(watcher) => Some((watcher, Mutex::new(rx))),
                 Err(e) => {
-                    warn!(
-                        "live template reloading initialization failed: {e}\n\
-                        live template reloading is unavailable"
-                    );
+                    warn!("Failed to enable live template reloading: {e}");
+                    warn_!("Live template reloading is unavailable.");
                     None
                 }
             };
@@ -148,12 +146,10 @@ mod manager {
             });
 
             if let Some(true) = templates_changes {
-                debug!("template change detected: reloading templates");
+                debug_!("Change detected: reloading templates.");
                 if engine::reload(&mut self.context_mut().tera).is_none() {
-                    warn!(
-                        "error while reloading template\n\
-                        existing templates will remain active."
-                    )
+                    warn_!("An error occurred while reloading templates.");
+                    warn_!("Existing templates will remain active.");
                 };
             }
         }

@@ -16,6 +16,13 @@ use crate::fairing::TemplateFairing;
 
 pub(crate) const DEFAULT_TEMPLATE_DIR: &str = "templates";
 
+/// Logs that templates were used without attaching the templating fairing.
+pub(crate) fn log_missing_fairing() {
+    error!("Uninitialized template context: missing fairing.");
+    info_!("To use templates, you must attach `Template::fairing()`.");
+    info_!("See the `Template` documentation for more information.");
+}
+
 /// Responder that renders a dynamic template.
 ///
 /// `Template` serves as a _proxy_ type for rendering a template and _does not_
@@ -236,12 +243,7 @@ impl Template {
             .state::<ContextManager>()
             .map(ContextManager::context)
             .or_else(|| {
-                error!(
-                    "Uninitialized template context: missing fairing.\n\
-                    To use templates, you must attach `Template::fairing()`.\n\
-                    See the `Template` documentation for more information."
-                );
-
+                log_missing_fairing();
                 None
             })?;
 
@@ -293,11 +295,7 @@ impl Template {
 impl<'r> Responder<'r, 'static> for Template {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
         let ctxt = req.rocket().state::<ContextManager>().ok_or_else(|| {
-            error!(
-                "uninitialized template context: missing `Template::fairing()`.\n\
-                    To use templates, you must attach `Template::fairing()`."
-            );
-
+            log_missing_fairing();
             Status::InternalServerError
         })?;
 
@@ -308,11 +306,7 @@ impl<'r> Responder<'r, 'static> for Template {
 impl Sentinel for Template {
     fn abort(rocket: &Rocket<Ignite>) -> bool {
         if rocket.state::<ContextManager>().is_none() {
-            error!(
-                "Missing `Template::fairing()`.\n\
-                 To use templates, you must attach `Template::fairing()`."
-            );
-
+            log_missing_fairing();
             return true;
         }
 
