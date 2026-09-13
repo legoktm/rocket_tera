@@ -15,7 +15,6 @@
 //!      `${ROCKET_ROOT}/templates/index.html`.
 //!
 //!      [configurable]: #configuration
-//!      [Tera]: https://docs.rs/crate/tera/2
 //!
 //!   3. Attach `Template::fairing()` and return a [`Template`] from your routes
 //!      via [`Template::render()`], supplying the path of the template file
@@ -43,7 +42,7 @@
 //!   * `template_dir` (**default: `templates/`**)
 //!
 //!     A path to a directory to search for template files in. Relative paths
-//!     are considered relative to the configuration file, or there is no file,
+//!     are considered relative to the configuration file, or if there is no file,
 //!     the current working directory.
 //!
 //! For example, to change the default and set `template_dir` to different
