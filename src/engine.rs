@@ -21,7 +21,7 @@ pub(crate) fn init() -> Tera {
 pub(crate) fn load(tera: &mut Tera, root: &Path) -> Option<()> {
     let glob = root.join("**").join("[!.]*");
     let Some(glob) = glob.to_str() else {
-        error_!(
+        error!(
             "Template directory '{}' is not valid UTF-8.",
             root.display()
         );
@@ -29,8 +29,8 @@ pub(crate) fn load(tera: &mut Tera, root: &Path) -> Option<()> {
     };
 
     if let Err(e) = tera.load_from_glob(glob) {
-        error_!("Tera templating initialization failed.");
-        info_!("{}", e);
+        error!("Tera templating initialization failed.");
+        info!("{}", e);
         log_error(&e);
         return None;
     }
@@ -43,8 +43,8 @@ pub(crate) fn load(tera: &mut Tera, root: &Path) -> Option<()> {
 #[cfg(debug_assertions)]
 pub(crate) fn reload(tera: &mut Tera) -> Option<()> {
     if let Err(e) = tera.full_reload() {
-        error_!("Tera template reloading failed.");
-        info_!("{}", e);
+        error!("Tera template reloading failed.");
+        info!("{}", e);
         log_error(&e);
         return None;
     }
@@ -55,13 +55,13 @@ pub(crate) fn reload(tera: &mut Tera) -> Option<()> {
 /// Renders `template`, which the caller must have checked exists.
 pub(crate) fn render<C: Serialize>(tera: &Tera, template: &str, context: C) -> Option<String> {
     let tera_ctx = Context::from_serialize(&context)
-        .map_err(|e| error_!("Tera context error: {}.", e))
+        .map_err(|e| error!("Tera context error: {}.", e))
         .ok()?;
 
     match tera.render(template, &tera_ctx) {
         Ok(string) => Some(string),
         Err(e) => {
-            error_!("Error rendering Tera template '{}': {}", template, e);
+            error!("Error rendering Tera template '{}': {}", template, e);
             log_error(&e);
             None
         }
@@ -73,7 +73,7 @@ pub(crate) fn render<C: Serialize>(tera: &Tera, template: &str, context: C) -> O
 pub(crate) fn log_error(error: &dyn Error) {
     let mut source = error.source();
     while let Some(err) = source {
-        info_!("{}", err);
+        info!("{}", err);
         source = err.source();
     }
 }

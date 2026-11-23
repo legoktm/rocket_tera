@@ -19,8 +19,8 @@ pub(crate) const DEFAULT_TEMPLATE_DIR: &str = "templates";
 /// Logs that templates were used without attaching the templating fairing.
 pub(crate) fn log_missing_fairing() {
     error!("Uninitialized template context: missing fairing.");
-    info_!("To use templates, you must attach `Template::fairing()`.");
-    info_!("See the `Template` documentation for more information.");
+    info!("To use templates, you must attach `Template::fairing()`.");
+    info!("See the `Template` documentation for more information.");
 }
 
 /// Responder that renders a dynamic template.
@@ -261,20 +261,20 @@ impl Template {
         let template = &*self.name;
         if !ctxt.tera.contains_template(template) {
             let ts: Vec<_> = ctxt.tera.get_template_names().collect();
-            error_!("Template '{}' does not exist.", template);
-            info_!("Known templates: {}.", ts.join(", "));
-            info_!("Searched in {:?}.", ctxt.root);
+            error!("Template '{}' does not exist.", template);
+            info!("Known templates: {}.", ts.join(", "));
+            info!("Searched in {:?}.", ctxt.root);
 
             return Err(Status::InternalServerError);
         }
 
         let value = self.value.map_err(|e| {
-            error_!("Template context failed to serialize: {}.", e);
+            error!("Template context failed to serialize: {}.", e);
             Status::InternalServerError
         })?;
 
         let string = engine::render(&ctxt.tera, template, value).ok_or_else(|| {
-            error_!("Template '{}' failed to render.", template);
+            error!("Template '{}' failed to render.", template);
             Status::InternalServerError
         })?;
 

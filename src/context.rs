@@ -33,8 +33,8 @@ impl Context {
 
         let mut tera = engine::init();
         if let Err(reason) = callback(&mut tera) {
-            error_!("Template customization callback failed.");
-            error_!("{}", reason);
+            error!("Template customization callback failed.");
+            error!("{}", reason);
             engine::log_error(&*reason);
             return None;
         }
@@ -104,7 +104,7 @@ mod manager {
                 Ok(watcher) => Some((watcher, Mutex::new(rx))),
                 Err(e) => {
                     warn!("Failed to enable live template reloading: {e}");
-                    warn_!("Live template reloading is unavailable.");
+                    warn!("Live template reloading is unavailable.");
                     None
                 }
             };
@@ -146,10 +146,10 @@ mod manager {
             });
 
             if let Some(true) = templates_changes {
-                debug_!("Change detected: reloading templates.");
+                debug!("Change detected: reloading templates.");
                 if engine::reload(&mut self.context_mut().tera).is_none() {
-                    warn_!("An error occurred while reloading templates.");
-                    warn_!("Existing templates will remain active.");
+                    warn!("An error occurred while reloading templates.");
+                    warn!("Existing templates will remain active.");
                 };
             }
         }
