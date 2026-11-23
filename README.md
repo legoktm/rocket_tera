@@ -36,11 +36,14 @@ See the [crate docs](https://docs.rs/rocket_tera) for full details.
 
 This crate is intended to be used with trusted templates that are shipped alongside your Rocket application. Using untrusted or user-provided templates is out of scope of this crate's threat model.
 
-# Versions
+# Supported versions
 
-The 2.x series uses Tera 2.0 and is the primary release and actively supported.
+| rocket_tera version | Rocket version | Tera version | Status |
+|--------|--------|--------|--------|
+| 3.x | 0.6.0-rc.X | 2.0 | alpha (pending final 0.6 release) |
+| 2.x | 0.5.x | 2.0 | actively supported (recommended) |
+| 1.x | 0.5.x | 1.0 | maintained through end of 2026 (at least) |
 
-The 1.x series uses Tera 1.0 and exists primarily to ease migrating to this crate. It will be maintained until the end of 2026 (at least).
 
 # History
 
